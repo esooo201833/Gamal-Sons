@@ -105,6 +105,11 @@
 .contact-card:hover { border-color: #c5a36a; background: var(--white); }
 .contact-card-primary { border-color: #d6be94; background: var(--white); }
 .contact-icon { width: 39px; height: 39px; flex: 0 0 auto; display: grid; place-items: center; color: #735a31; background: #eee5d5; }
+.whatsapp-brand-icon, .social-rail-whatsapp { color: #25d366; }
+.facebook-brand-icon, .social-rail-facebook { color: #1877f2; }
+.telegram-brand-icon, .social-rail-telegram { color: #26a5e4; }
+.social-rail-maps { color: #4285f4; }
+.social-rail-link:hover, .social-rail-link:focus-visible { color: var(--white); }
 .contact-card-copy { min-width: 0; flex: 1; display: grid; gap: 5px; }
 .contact-card-copy strong { color: #1b1a17; font-size: 12px; font-weight: 600; line-height: 1.6; }
 .contact-card-copy small { color: var(--muted); font-size: 10px; line-height: 1.6; }

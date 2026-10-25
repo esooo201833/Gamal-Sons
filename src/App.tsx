@@ -7,12 +7,11 @@ import {
   MessageCircle,
   Minus,
   Plus,
-  Send,
   ShoppingBag,
   Trash2,
-  UsersRound,
   X,
 } from 'lucide-react'
+import { SiFacebook, SiGooglemaps, SiTelegram, SiWhatsapp } from 'react-icons/si'
 import { site } from './config/site'
 import { products } from './data/products'
 import { translations, type Language } from './i18n/translations'
@@ -318,13 +317,13 @@ function App() {
                 <span className="contact-icon"><MessageCircle size={20} aria-hidden="true" /></span><span className="contact-card-copy"><strong>{t('whatsappContact')}</strong><small>{site.whatsappDisplayNumber}</small></span><ArrowUpRight size={17} aria-hidden="true" />
               </a>
               <a className="contact-card" href={site.whatsappGroupUrl} target="_blank" rel="noreferrer">
-                <span className="contact-icon"><MessageCircle size={20} aria-hidden="true" /></span><span className="contact-card-copy"><strong>{t('whatsappGroupContact')}</strong><small>{t('whatsappGroupDetail')}</small></span><ArrowUpRight size={17} aria-hidden="true" />
+                <span className="contact-icon whatsapp-brand-icon"><SiWhatsapp size={20} aria-hidden="true" /></span><span className="contact-card-copy"><strong>{t('whatsappGroupContact')}</strong><small>{t('whatsappGroupDetail')}</small></span><ArrowUpRight size={17} aria-hidden="true" />
               </a>
               <a className="contact-card" href={site.facebookUrl} target="_blank" rel="noreferrer">
-                <span className="contact-icon"><UsersRound size={20} aria-hidden="true" /></span><span className="contact-card-copy"><strong>{t('facebookContact')}</strong><small>{t('facebookDetail')}</small></span><ArrowUpRight size={17} aria-hidden="true" />
+                <span className="contact-icon facebook-brand-icon"><SiFacebook size={20} aria-hidden="true" /></span><span className="contact-card-copy"><strong>{t('facebookContact')}</strong><small>{t('facebookDetail')}</small></span><ArrowUpRight size={17} aria-hidden="true" />
               </a>
               <a className="contact-card" href={site.telegramUrl} target="_blank" rel="noreferrer">
-                <span className="contact-icon"><Send size={19} aria-hidden="true" /></span><span className="contact-card-copy"><strong>{t('telegramContact')}</strong><small>{t('telegramDetail')}</small></span><ArrowUpRight size={17} aria-hidden="true" />
+                <span className="contact-icon telegram-brand-icon"><SiTelegram size={20} aria-hidden="true" /></span><span className="contact-card-copy"><strong>{t('telegramContact')}</strong><small>{t('telegramDetail')}</small></span><ArrowUpRight size={17} aria-hidden="true" />
               </a>
               <div className="contact-card address-card">
                 <span className="contact-icon"><MapPin size={20} aria-hidden="true" /></span><span className="contact-card-copy"><strong>{t('officeAddress')}</strong><small>{language === 'ar' ? site.addressArabic : language === 'fr' ? site.addressFrench : site.addressEnglish}</small><span className="map-link">{t('mapsButton')} <ArrowUpRight size={14} aria-hidden="true" /></span></span>
@@ -392,16 +391,16 @@ function LanguageSelector({ language, onChange, className = '' }: { language: La
 
 function SocialRail({ t }: { t: Translate }) {
   const links = [
-    { href: site.facebookUrl, label: t('facebookContact'), shortLabel: t('railFacebook'), Icon: UsersRound },
-    { href: site.telegramUrl, label: t('telegramContact'), shortLabel: t('railTelegram'), Icon: Send },
-    { href: site.whatsappGroupUrl, label: t('whatsappGroupContact'), shortLabel: t('railWhatsAppGroup'), Icon: MessageCircle },
-    { href: site.googleMapsUrl, label: t('mapsButton'), shortLabel: t('railMaps'), Icon: MapPin },
+    { href: site.facebookUrl, label: t('facebookContact'), shortLabel: t('railFacebook'), Icon: SiFacebook, platform: 'facebook' },
+    { href: site.telegramUrl, label: t('telegramContact'), shortLabel: t('railTelegram'), Icon: SiTelegram, platform: 'telegram' },
+    { href: site.whatsappGroupUrl, label: t('whatsappGroupContact'), shortLabel: t('railWhatsAppGroup'), Icon: SiWhatsapp, platform: 'whatsapp' },
+    { href: site.googleMapsUrl, label: t('mapsButton'), shortLabel: t('railMaps'), Icon: SiGooglemaps, platform: 'maps' },
   ]
 
   return (
     <nav className="social-rail" aria-label={t('socialLinksLabel')}>
-      {links.map(({ href, label, shortLabel, Icon }) => (
-        <a className="social-rail-link" href={href} key={href} target="_blank" rel="noopener noreferrer" aria-label={label} title={label}>
+      {links.map(({ href, label, shortLabel, Icon, platform }) => (
+        <a className={`social-rail-link social-rail-${platform}`} href={href} key={href} target="_blank" rel="noopener noreferrer" aria-label={label} title={label}>
           <Icon size={19} aria-hidden="true" />
           <span className="social-rail-label">{shortLabel}</span>
         </a>
