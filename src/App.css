@@ -4,9 +4,9 @@
 .skip-link { position: fixed; z-index: 100; inset-block-start: 10px; inset-inline-start: 10px; padding: 10px 16px; color: var(--black); background: var(--gold); transform: translateY(-150%); }
 .skip-link:focus { transform: translateY(0); }
 .site-header { position: sticky; z-index: 20; inset-block-start: 0; color: var(--white); background: var(--black); border-bottom: 1px solid rgb(255 255 255 / 10%); }
-.social-rail { position: fixed; z-index: 18; inset-inline-end: max(12px, calc((100vw - 1420px) / 2)); inset-block-start: 50%; display: flex; flex-direction: column; gap: 5px; padding: 5px; border: 1px solid rgb(255 255 255 / 12%); background: rgb(8 8 8 / 94%); transform: translateY(-50%); }
+.social-rail { position: fixed; z-index: 18; inset-inline-end: max(12px, calc((100vw - 1420px) / 2)); inset-block-start: 50%; display: flex; flex-direction: column; gap: 5px; padding: 0; border: 0; background: transparent; transform: translateY(-50%); }
 .social-rail-link { position: relative; width: 42px; height: 42px; display: grid; place-items: center; border: 1px solid transparent; color: var(--gold); text-decoration: none; transition: color .18s ease, background .18s ease; }
-.social-rail-link:hover, .social-rail-link:focus-visible { color: var(--white); background: #28251f; }
+.social-rail-link:hover, .social-rail-link:focus-visible { background: rgb(8 8 8 / 7%); }
 .social-rail-label { position: absolute; inset-inline-start: calc(100% + 8px); inset-block-start: 50%; padding: 7px 10px; color: var(--white); background: var(--dark-surface); border: 1px solid rgb(255 255 255 / 14%); font-size: 11px; line-height: 1.4; white-space: nowrap; opacity: 0; visibility: hidden; transform: translateY(-50%) translateX(-4px); transition: opacity .16s ease, transform .16s ease, visibility .16s ease; }
 .social-rail-link:hover .social-rail-label, .social-rail-link:focus-visible .social-rail-label { opacity: 1; visibility: visible; transform: translateY(-50%); }
 .nav-wrap { width: min(1380px, calc(100% - 48px)); min-height: 78px; margin-inline: auto; display: flex; align-items: center; justify-content: space-between; gap: 28px; }
@@ -109,7 +109,6 @@
 .facebook-brand-icon, .social-rail-facebook { color: #1877f2; }
 .telegram-brand-icon, .social-rail-telegram { color: #26a5e4; }
 .social-rail-maps { color: #4285f4; }
-.social-rail-link:hover, .social-rail-link:focus-visible { color: var(--white); }
 .contact-card-copy { min-width: 0; flex: 1; display: grid; gap: 5px; }
 .contact-card-copy strong { color: #1b1a17; font-size: 12px; font-weight: 600; line-height: 1.6; }
 .contact-card-copy small { color: var(--muted); font-size: 10px; line-height: 1.6; }
@@ -181,8 +180,9 @@
   .page-width { width: min(100% - 48px, 720px); }
   .nav-wrap { width: calc(100% - 36px); min-height: 72px; }
   .social-rail { inset-inline-start: 50%; inset-inline-end: auto; inset-block-start: auto; inset-block-end: calc(10px + env(safe-area-inset-bottom)); width: max-content; max-width: calc(100vw - 16px); flex-direction: row; gap: 0; padding: 4px; transform: translateX(-50%); }
+  [dir='rtl'] .social-rail { transform: translateX(50%); }
   .social-rail-link { width: 70px; height: 54px; flex-direction: column; gap: 2px; }
-  .social-rail-label { position: static; padding: 0; color: #e7e1d7; background: transparent; border: 0; font-size: 8px; line-height: 1.2; opacity: 1; visibility: visible; transform: none; }
+  .social-rail-label { position: static; padding: 1px 3px; color: var(--black); background: rgb(247 243 235 / 88%); border: 0; border-radius: 2px; font-size: 8px; line-height: 1.2; opacity: 1; visibility: visible; transform: none; }
   .social-rail-link:hover .social-rail-label, .social-rail-link:focus-visible .social-rail-label { transform: none; }
   .site-footer { padding-block-end: calc(66px + env(safe-area-inset-bottom)); }
   .desktop-language, .nav-whatsapp { display: none; }
