@@ -196,6 +196,8 @@ function App() {
         </div>
       </header>
 
+      <SocialRail t={t} />
+
       <main id="main">
         <section className="hero-section" id="home">
           <div className="hero-inner page-width">
@@ -315,6 +317,9 @@ function App() {
               <a className="contact-card contact-card-primary" href={site.whatsappUrl} target="_blank" rel="noreferrer">
                 <span className="contact-icon"><MessageCircle size={20} aria-hidden="true" /></span><span className="contact-card-copy"><strong>{t('whatsappContact')}</strong><small>{site.whatsappDisplayNumber}</small></span><ArrowUpRight size={17} aria-hidden="true" />
               </a>
+              <a className="contact-card" href={site.whatsappGroupUrl} target="_blank" rel="noreferrer">
+                <span className="contact-icon"><MessageCircle size={20} aria-hidden="true" /></span><span className="contact-card-copy"><strong>{t('whatsappGroupContact')}</strong><small>{t('whatsappGroupDetail')}</small></span><ArrowUpRight size={17} aria-hidden="true" />
+              </a>
               <a className="contact-card" href={site.facebookUrl} target="_blank" rel="noreferrer">
                 <span className="contact-icon"><UsersRound size={20} aria-hidden="true" /></span><span className="contact-card-copy"><strong>{t('facebookContact')}</strong><small>{t('facebookDetail')}</small></span><ArrowUpRight size={17} aria-hidden="true" />
               </a>
@@ -344,7 +349,7 @@ function App() {
             <p>{t('footerAddress')}</p>
           </div>
           <div className="footer-column"><h3>{t('footerNavigate')}</h3>{navLinks.map((link) => <a href={link.href} key={link.href}>{link.label}</a>)}</div>
-          <div className="footer-column"><h3>{t('footerContact')}</h3><a href={site.whatsappUrl} target="_blank" rel="noreferrer">WhatsApp</a><a href={site.facebookUrl} target="_blank" rel="noreferrer">Facebook</a><a href={site.telegramUrl} target="_blank" rel="noreferrer">Telegram</a><a href={site.googleMapsUrl} target="_blank" rel="noreferrer">{t('mapsButton')}</a></div>
+          <div className="footer-column"><h3>{t('footerContact')}</h3><a href={site.whatsappUrl} target="_blank" rel="noreferrer">{t('whatsappContact')}</a><a href={site.whatsappGroupUrl} target="_blank" rel="noreferrer">{t('whatsappGroupContact')}</a><a href={site.facebookUrl} target="_blank" rel="noreferrer">{t('facebookContact')}</a><a href={site.telegramUrl} target="_blank" rel="noreferrer">{t('telegramContact')}</a><a href={site.googleMapsUrl} target="_blank" rel="noreferrer">{t('mapsButton')}</a></div>
         </div>
         <div className="page-width footer-bottom"><span>© {currentYear} {site.brandName}. {t('copyright')}</span><span>{t('footerLocation')}</span></div>
       </footer>
@@ -383,6 +388,26 @@ function LanguageSelector({ language, onChange, className = '' }: { language: La
   return <div className={`language-selector ${className}`} role="group" aria-label={language === 'ar' ? 'اختاري اللغة' : language === 'fr' ? 'Choisir la langue' : 'Choose language'}>
     {languages.map((item) => <button key={item.code} type="button" lang={item.code} aria-label={item.name} aria-pressed={language === item.code} onClick={() => onChange(item.code)}>{item.label}</button>)}
   </div>
+}
+
+function SocialRail({ t }: { t: Translate }) {
+  const links = [
+    { href: site.facebookUrl, label: t('facebookContact'), shortLabel: t('railFacebook'), Icon: UsersRound },
+    { href: site.telegramUrl, label: t('telegramContact'), shortLabel: t('railTelegram'), Icon: Send },
+    { href: site.whatsappGroupUrl, label: t('whatsappGroupContact'), shortLabel: t('railWhatsAppGroup'), Icon: MessageCircle },
+    { href: site.googleMapsUrl, label: t('mapsButton'), shortLabel: t('railMaps'), Icon: MapPin },
+  ]
+
+  return (
+    <nav className="social-rail" aria-label={t('socialLinksLabel')}>
+      {links.map(({ href, label, shortLabel, Icon }) => (
+        <a className="social-rail-link" href={href} key={href} target="_blank" rel="noopener noreferrer" aria-label={label} title={label}>
+          <Icon size={19} aria-hidden="true" />
+          <span className="social-rail-label">{shortLabel}</span>
+        </a>
+      ))}
+    </nav>
+  )
 }
 
 export default App

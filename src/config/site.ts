@@ -3,6 +3,7 @@ export const site = {
   brandNameArabic: 'أولاد جمال',
   whatsappDisplayNumber: '01001825584',
   whatsappUrl: 'https://wa.me/201001825584',
+  whatsappGroupUrl: 'https://chat.whatsapp.com/FZS2RVM4Hrp7qMogxxqKVq',
   facebookUrl: 'https://www.facebook.com/groups/awlaad.gamal',
   telegramUrl: 'https://t.me/awladgmalllapaya',
   googleMapsUrl: 'https://goo.gl/maps/ZNhCTcYDc8cm1rZa9',
