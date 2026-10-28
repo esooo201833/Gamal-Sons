@@ -42,7 +42,6 @@ const telegramProducts: Product[] = [
   { id: 'telegram-model-111', image: '/assets/products/processed/telegram-model-111.webp', width: 370, height: 722, modelCode: '111', modelCodeStatus: 'verified', category: 'abaya' },
   { id: 'telegram-model-184', image: '/assets/products/processed/telegram-model-184.webp', width: 290, height: 787, modelCode: '184', modelCodeStatus: 'verified', category: 'abaya' },
   { id: 'telegram-model-161', image: '/assets/products/processed/telegram-model-161.webp', width: 323, height: 757, modelCode: '161', modelCodeStatus: 'verified', category: 'abaya' },
-  { id: 'telegram-model-409', image: '/assets/products/processed/telegram-model-409.webp', width: 600, height: 799, modelCode: '409', modelCodeStatus: 'verified', category: 'abaya' },
   { id: 'telegram-model-306', image: '/assets/products/processed/telegram-model-306.webp', width: 382, height: 757, modelCode: '306', modelCodeStatus: 'verified', category: 'abaya' },
   { id: 'telegram-model-168', image: '/assets/products/processed/telegram-model-168.webp', width: 475, height: 628, modelCode: '168', modelCodeStatus: 'verified', category: 'abaya' },
   { id: 'telegram-model-101', image: '/assets/products/processed/telegram-model-101.webp', width: 275, height: 769, modelCode: '101', modelCodeStatus: 'verified', category: 'abaya' },

@@ -59,6 +59,14 @@ function App() {
   const shouldReduceMotion = useReducedMotion()
   const copy = translations[language]
   const direction = language === 'ar' ? 'rtl' : 'ltr'
+  const revealProps = shouldReduceMotion
+    ? {}
+    : {
+        initial: { opacity: 0, y: 22 },
+        whileInView: { opacity: 1, y: 0 },
+        viewport: { once: true, amount: 0.16 },
+        transition: { duration: 0.55, ease: 'easeOut' as const },
+      }
 
   const t: Translate = (key, values = {}) =>
     Object.entries(values).reduce(
@@ -243,7 +251,12 @@ function App() {
       <main id="main">
         <section className="hero-section" id="home">
           <div className="hero-inner page-width">
-            <div className="hero-copy">
+            <motion.div
+              className="hero-copy"
+              initial={shouldReduceMotion ? false : { opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.65, ease: 'easeOut', delay: 0.08 }}
+            >
               <p className="eyebrow"><span className="eyebrow-mark" />{t('heroEyebrow')}</p>
               <h1>{t('heroTitle')}</h1>
               <p className="hero-description">{t('heroDescription')}</p>
@@ -252,8 +265,13 @@ function App() {
                 <a className="button button-outline" href={site.whatsappUrl} target="_blank" rel="noreferrer"><MessageCircle size={17} aria-hidden="true" />{t('inquireWhatsApp')}</a>
               </div>
               <p className="hero-note"><span />{t('heroNote')}</p>
-            </div>
-            <div className="hero-visual">
+            </motion.div>
+            <motion.div
+              className="hero-visual"
+              initial={shouldReduceMotion ? false : { opacity: 0, y: 16, scale: 0.985 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.75, ease: 'easeOut', delay: 0.18 }}
+            >
               <div className="hero-image-frame" role="group" aria-label={t('heroImageAlt')}>
                 <div className="hero-composition-orbit" aria-hidden="true" />
                 <AnimatePresence mode="wait" initial={false}>
@@ -302,16 +320,15 @@ function App() {
                 </div>
                 <span>{t('heroModelsCaption')}</span>
               </div>
-            </div>
+            </motion.div>
           </div>
           <div className="hero-bottom page-width"><span>{t('heroNote')}</span><span>{t('heroFounded')}</span><span>{t('heroLocation')}</span></div>
         </section>
 
         <section className="about-section" id="about">
-          <div className="page-width about-inner">
-            <div className="about-history" aria-label={t('aboutEyebrow')}>
-              <span>{t('aboutEyebrow')}</span>
-              <strong dir="ltr">2016</strong>
+          <motion.div className="page-width about-inner" {...revealProps}>
+            <div className="about-history">
+              <img src="/assets/brand/awlad-gamal-logo-transparent.webp" alt={t('aboutTitle')} />
             </div>
             <div className="about-copy">
               <p className="eyebrow"><span className="eyebrow-mark" />{t('aboutEyebrow')}</p>
@@ -319,11 +336,11 @@ function App() {
               <p>{t('aboutDescription')}</p>
               <a className="text-link text-link-light" href="#contact">{t('contact')} <ArrowUpRight size={16} aria-hidden="true" /></a>
             </div>
-          </div>
+          </motion.div>
         </section>
 
         <section className="collection-intro section-pad" id="collection">
-          <div className="page-width collection-intro-inner">
+          <motion.div className="page-width collection-intro-inner" {...revealProps}>
             <div className="collection-intro-main">
               <p className="eyebrow eyebrow-dark"><span className="eyebrow-mark" />{t('collectionEyebrow')}</p>
               <h2>{t('collectionTitle')}</h2>
@@ -348,19 +365,19 @@ function App() {
               <p>{t('collectionDescription')}</p>
               <a className="text-link" href="#latest">{t('latest')} <ArrowUpRight size={16} aria-hidden="true" /></a>
             </div>
-          </div>
+          </motion.div>
         </section>
 
         <section className="catalog-section" id="latest">
           <div className="page-width">
-            <div className="catalog-heading">
+            <motion.div className="catalog-heading" {...revealProps}>
               <div>
                 <p className="eyebrow eyebrow-dark"><span className="eyebrow-mark" />{t('catalogEyebrow')}</p>
                 <h2>{t('catalogTitle')}</h2>
                 <p className="section-description">{t('catalogDescription')}</p>
               </div>
               <span className="catalog-count">{t('modelsAvailable', { count: filteredProducts.length })}</span>
-            </div>
+            </motion.div>
             <div className="product-grid">
               {filteredProducts.map((product) => {
                 const index = products.findIndex((item) => item.id === product.id)
@@ -389,11 +406,11 @@ function App() {
 
         <section className="process-section section-pad">
           <div className="page-width">
-            <div className="section-heading centered-heading">
+            <motion.div className="section-heading centered-heading" {...revealProps}>
               <p className="eyebrow eyebrow-dark"><span className="eyebrow-mark" />{t('processEyebrow')}</p>
               <h2>{t('processTitle')}</h2>
-            </div>
-            <div className="process-grid">
+            </motion.div>
+            <motion.div className="process-grid" {...revealProps}>
               {[
                 { number: '01', title: t('stepOneTitle'), description: t('stepOneDescription') },
                 { number: '02', title: t('stepTwoTitle'), description: t('stepTwoDescription') },
@@ -405,13 +422,13 @@ function App() {
                   <p>{step.description}</p>
                 </article>
               ))}
-            </div>
+            </motion.div>
           </div>
         </section>
 
         <section className="reviews-section section-pad" id="reviews">
           <div className="page-width">
-            <div className="reviews-heading">
+            <motion.div className="reviews-heading" {...revealProps}>
               <div>
                 <p className="eyebrow eyebrow-dark"><span className="eyebrow-mark" />{t('reviewsEyebrow')}</p>
                 <h2>{t('reviewsTitle')}</h2>
@@ -423,8 +440,8 @@ function App() {
                 <span className="rating-count">{t('googleReviewsCount')}</span>
                 <span className="rating-source">{t('googleRatingChecked')}</span>
               </div>
-            </div>
-            <div className="reviews-grid">
+            </motion.div>
+            <motion.div className="reviews-grid" {...revealProps}>
               {[
                 { author: t('reviewAuthorOne'), quote: t('reviewQuoteOne') },
                 { author: t('reviewAuthorTwo'), quote: t('reviewQuoteTwo') },
@@ -438,7 +455,7 @@ function App() {
                   <p className="review-author">{review.author}</p>
                 </article>
               ))}
-            </div>
+            </motion.div>
             <a className="text-link reviews-link" href={site.googleMapsUrl} target="_blank" rel="noreferrer">
               {t('viewGoogleReviews')} <ArrowUpRight size={16} aria-hidden="true" />
             </a>
@@ -447,14 +464,14 @@ function App() {
 
         <section className="contact-section section-pad" id="contact">
           <div className="page-width">
-            <div className="contact-heading">
+            <motion.div className="contact-heading" {...revealProps}>
               <div>
                 <p className="eyebrow eyebrow-dark"><span className="eyebrow-mark" />{t('contactEyebrow')}</p>
                 <h2>{t('contactTitle')}</h2>
               </div>
               <p>{t('contactDescription')}</p>
-            </div>
-            <div className="business-facts" aria-label={t('businessInfoLabel')}>
+            </motion.div>
+            <motion.div className="business-facts" aria-label={t('businessInfoLabel')} {...revealProps}>
               <div className="business-fact">
                 <span className="contact-icon"><Globe2 size={20} aria-hidden="true" /></span>
                 <span className="business-fact-copy"><strong>{t('shippingLabel')}</strong><small>{t('shippingWorldwide')}</small></span>
@@ -463,8 +480,8 @@ function App() {
                 <span className="contact-icon"><Clock3 size={20} aria-hidden="true" /></span>
                 <span className="business-fact-copy"><strong>{t('officeHoursLabel')}</strong><small>{t('officeHoursValue')}</small></span>
               </div>
-            </div>
-            <div className="contact-grid">
+            </motion.div>
+            <motion.div className="contact-grid" {...revealProps}>
               <a className="contact-card contact-card-primary" href={site.whatsappUrl} target="_blank" rel="noreferrer">
                 <span className="contact-icon"><MessageCircle size={20} aria-hidden="true" /></span><span className="contact-card-copy"><strong>{t('whatsappContact')}</strong><small>{site.whatsappDisplayNumber}</small></span><ArrowUpRight size={17} aria-hidden="true" />
               </a>
@@ -481,27 +498,27 @@ function App() {
                 <span className="contact-icon"><MapPin size={20} aria-hidden="true" /></span><span className="contact-card-copy"><strong>{t('officeAddress')}</strong><small>{language === 'ar' ? site.addressArabic : language === 'fr' ? site.addressFrench : site.addressEnglish}</small><span className="map-link">{t('mapsButton')} <ArrowUpRight size={14} aria-hidden="true" /></span></span>
                 <a className="address-link" href={site.googleMapsUrl} target="_blank" rel="noreferrer" aria-label={t('mapsButton')} />
               </div>
-            </div>
+            </motion.div>
           </div>
         </section>
 
         <section className="final-cta">
-          <div className="page-width final-cta-inner">
+          <motion.div className="page-width final-cta-inner" {...revealProps}>
             <div><p className="eyebrow"><span className="eyebrow-mark" />{t('heroEyebrow')}</p><h2>{t('finalTitle')}</h2><p>{t('finalDescription')}</p></div>
             <a className="button button-gold" href={site.whatsappUrl} target="_blank" rel="noreferrer">{t('finalButton')} <ArrowUpRight size={16} aria-hidden="true" /></a>
-          </div>
+          </motion.div>
         </section>
       </main>
 
       <footer className="site-footer">
-        <div className="page-width footer-main">
+        <motion.div className="page-width footer-main" {...revealProps}>
           <div className="footer-brand-block">
             <a className="brand footer-brand" href="#home"><img src="/assets/brand/awlad-gamal-logo-transparent.webp" width="54" height="54" alt={t('logoAlt')} loading="lazy" /><span className="brand-copy"><strong>{site.brandName}</strong><small>{site.brandNameArabic}</small></span></a>
             <p>{t('footerAddress')}</p>
           </div>
           <div className="footer-column"><h3>{t('footerNavigate')}</h3>{navLinks.map((link) => <a href={link.href} key={link.href}>{link.label}</a>)}</div>
           <div className="footer-column"><h3>{t('footerContact')}</h3><a href={site.whatsappUrl} target="_blank" rel="noreferrer">{t('whatsappContact')}</a><a href={site.whatsappGroupUrl} target="_blank" rel="noreferrer">{t('whatsappGroupContact')}</a><a href={site.facebookUrl} target="_blank" rel="noreferrer">{t('facebookContact')}</a><a href={site.telegramUrl} target="_blank" rel="noreferrer">{t('telegramContact')}</a><a href={site.googleMapsUrl} target="_blank" rel="noreferrer">{t('mapsButton')}</a></div>
-        </div>
+        </motion.div>
         <div className="page-width footer-bottom"><span>© {currentYear} {site.brandName}. {t('copyright')}</span><span>{t('footerLocation')}</span></div>
       </footer>
 

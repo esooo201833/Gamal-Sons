@@ -1,19 +1,20 @@
 :root {
   font-family: 'Inter', 'Alexandria', sans-serif;
-  color: #171614;
-  background: #f7f3eb;
+  color: #171511;
+  background: #f7f4ed;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-optical-sizing: auto;
-  --black: #080808;
-  --gold: #ddb568;
-  --ivory: #f7f3eb;
+  --black: #12110f;
+  --gold: #c9a35f;
+  --gold-light: #ead7ad;
+  --ivory: #f7f4ed;
   --white: #fff;
-  --muted: #77736c;
-  --border: #e8e0d3;
-  --dark-surface: #171614;
+  --muted: #746d62;
+  --border: #e6ddcd;
+  --dark-surface: #191714;
   --arabic-font: 'Alexandria', sans-serif;
   --editorial-font: 'Cormorant Garamond', Georgia, serif;
 }
