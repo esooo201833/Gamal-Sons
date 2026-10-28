@@ -2,6 +2,8 @@ import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import {
   ArrowDown,
   ArrowUpRight,
+  ChevronLeft,
+  ChevronRight,
   Clock3,
   ClipboardList,
   Globe2,
@@ -9,20 +11,24 @@ import {
   Menu,
   MessageCircle,
   Minus,
+  Pause,
   Plus,
+  Play,
   Star,
   Trash2,
   X,
 } from 'lucide-react'
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { SiFacebook, SiGooglemaps, SiTelegram, SiWhatsapp } from 'react-icons/si'
 import { site } from './config/site'
-import { products } from './data/products'
+import { products, type Product } from './data/products'
 import { translations, type Language } from './i18n/translations'
 import './App.css'
 
 type TranslationKey = keyof typeof translations.en
 type Translate = (key: TranslationKey, values?: Record<string, string | number>) => string
 type Inquiry = Record<string, number>
+type ProductCategory = 'all' | Product['category']
 
 const languages: { code: Language; label: string; name: string }[] = [
   { code: 'ar', label: 'عربي', name: 'العربية' },
@@ -30,14 +36,6 @@ const languages: { code: Language; label: string; name: string }[] = [
   { code: 'fr', label: 'FR', name: 'Français' },
 ]
 const currentYear = new Date().getFullYear()
-const categoryKeys: TranslationKey[] = [
-  'categoryAbayas',
-  'categoryHomewear',
-  'categoryLingerie',
-  'categoryDresses',
-  'categoryOther',
-]
-
 const getInitialLanguage = (): Language => {
   try {
     const saved = localStorage.getItem('awlad-gamal-language')
@@ -53,8 +51,12 @@ function App() {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [notice, setNotice] = useState('')
+  const [activeHeroIndex, setActiveHeroIndex] = useState(0)
+  const [heroPaused, setHeroPaused] = useState(false)
+  const [activeCategory, setActiveCategory] = useState<ProductCategory>('all')
   const closeButtonRef = useRef<HTMLButtonElement>(null)
   const returnFocusRef = useRef<HTMLElement | null>(null)
+  const shouldReduceMotion = useReducedMotion()
   const copy = translations[language]
   const direction = language === 'ar' ? 'rtl' : 'ltr'
 
@@ -70,14 +72,29 @@ function App() {
   const heroProducts = ['201', '200', '199', '202'].flatMap((code) =>
     products.filter((product) => product.modelCode === code),
   )
+  const activeHeroProduct = heroProducts[activeHeroIndex]
+  const filteredProducts = activeCategory === 'all'
+    ? products
+    : products.filter((product) => product.category === activeCategory)
+  const categoryFilters: { id: ProductCategory; label: TranslationKey }[] = [
+    { id: 'all', label: 'categoryAll' },
+    { id: 'abaya', label: 'categoryAbayas' },
+    { id: 'isdaal', label: 'categoryIsdaal' },
+  ]
   const productName = (product: (typeof products)[number]) =>
     product.modelCode ?? t('codeNeedsReview')
   const productInquiryLabel = (product: (typeof products)[number], index: number) =>
     product.modelCode
       ? `${t('modelCodePrefix')}: ${product.modelCode}`
       : t('unverifiedImageLabel', { number: String(index + 1).padStart(2, '0') })
-  const categoryWhatsAppHref = (category: string) =>
-    `${site.whatsappUrl}?text=${encodeURIComponent(t('categoryInquiryMessage', { category }))}`
+
+  useEffect(() => {
+    if (shouldReduceMotion || heroPaused || heroProducts.length < 2) return
+    const timer = window.setInterval(() => {
+      setActiveHeroIndex((index) => (index + 1) % heroProducts.length)
+    }, 5200)
+    return () => window.clearInterval(timer)
+  }, [heroPaused, heroProducts.length, shouldReduceMotion])
 
   useEffect(() => {
     document.documentElement.lang = language
@@ -117,6 +134,10 @@ function App() {
   const changeLanguage = (nextLanguage: Language) => {
     setLanguage(nextLanguage)
     setMobileMenuOpen(false)
+  }
+
+  const changeHeroSlide = (step: number) => {
+    setActiveHeroIndex((index) => (index + step + heroProducts.length) % heroProducts.length)
   }
 
   const openDrawer = () => {
@@ -178,9 +199,9 @@ function App() {
 
   const navLinks = [
     { href: '#home', label: t('home') },
+    { href: '#about', label: t('about') },
     { href: '#collection', label: t('collection') },
     { href: '#latest', label: t('latest') },
-    { href: '#about', label: t('about') },
     { href: '#contact', label: t('contact') },
   ]
 
@@ -233,27 +254,72 @@ function App() {
               <p className="hero-note"><span />{t('heroNote')}</p>
             </div>
             <div className="hero-visual">
-              <div className="hero-image-frame" role="img" aria-label={t('heroImageAlt')}>
+              <div className="hero-image-frame" role="group" aria-label={t('heroImageAlt')}>
                 <div className="hero-composition-orbit" aria-hidden="true" />
-                {heroProducts.map((product, index) => (
-                  <img
-                    className={`hero-model hero-model-${index + 1}`}
-                    key={product.id}
-                    src={product.image}
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.img
+                    className="hero-carousel-image"
+                    key={activeHeroProduct.id}
+                    src={activeHeroProduct.image}
                     alt=""
-                    width={product.width}
-                    height={product.height}
-                    fetchPriority={index === 0 ? 'high' : undefined}
+                    width={activeHeroProduct.width}
+                    height={activeHeroProduct.height}
+                    fetchPriority={activeHeroIndex === 0 ? 'high' : undefined}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: shouldReduceMotion ? 0 : 0.55, ease: [0.22, 1, 0.36, 1] }}
                   />
-                ))}
+                </AnimatePresence>
                 <span className="hero-model-code" dir="ltr">
-                  {t('heroFeaturedModel', { code: heroProducts[0].modelCode ?? '' })}
+                  {t('heroFeaturedModel', { code: activeHeroProduct.modelCode ?? '' })}
                 </span>
               </div>
-              <div className="hero-caption"><span>{t('heroSideNote')}</span><span>{t('heroModelsCaption')}</span></div>
+              <div className="hero-caption">
+                <span>{t('heroSideNote')}</span>
+                <div className="hero-slide-controls">
+                  <button type="button" className="hero-slide-arrow" onClick={() => setHeroPaused((paused) => !paused)} aria-label={t(heroPaused ? 'playSlideshow' : 'pauseSlideshow')}>
+                    {heroPaused ? <Play size={14} aria-hidden="true" /> : <Pause size={14} aria-hidden="true" />}
+                  </button>
+                  <button type="button" className="hero-slide-arrow" onClick={() => changeHeroSlide(-1)} aria-label={t('previousSlide')}>
+                    {direction === 'rtl' ? <ChevronRight size={17} aria-hidden="true" /> : <ChevronLeft size={17} aria-hidden="true" />}
+                  </button>
+                  <div className="hero-slide-dots" role="group" aria-label={t('heroCarouselLabel')}>
+                    {heroProducts.map((product, index) => (
+                      <button
+                        key={product.id}
+                        type="button"
+                        className="hero-slide-dot"
+                        aria-label={t('goToSlide', { number: index + 1 })}
+                        aria-pressed={index === activeHeroIndex}
+                        onClick={() => setActiveHeroIndex(index)}
+                      />
+                    ))}
+                  </div>
+                  <button type="button" className="hero-slide-arrow" onClick={() => changeHeroSlide(1)} aria-label={t('nextSlide')}>
+                    {direction === 'rtl' ? <ChevronLeft size={17} aria-hidden="true" /> : <ChevronRight size={17} aria-hidden="true" />}
+                  </button>
+                </div>
+                <span>{t('heroModelsCaption')}</span>
+              </div>
             </div>
           </div>
           <div className="hero-bottom page-width"><span>{t('heroNote')}</span><span>{t('heroFounded')}</span><span>{t('heroLocation')}</span></div>
+        </section>
+
+        <section className="about-section" id="about">
+          <div className="page-width about-inner">
+            <div className="about-history" aria-label={t('aboutEyebrow')}>
+              <span>{t('aboutEyebrow')}</span>
+              <strong dir="ltr">2016</strong>
+            </div>
+            <div className="about-copy">
+              <p className="eyebrow"><span className="eyebrow-mark" />{t('aboutEyebrow')}</p>
+              <h2>{t('aboutTitle')}</h2>
+              <p>{t('aboutDescription')}</p>
+              <a className="text-link text-link-light" href="#contact">{t('contact')} <ArrowUpRight size={16} aria-hidden="true" /></a>
+            </div>
+          </div>
         </section>
 
         <section className="collection-intro section-pad" id="collection">
@@ -263,11 +329,17 @@ function App() {
               <h2>{t('collectionTitle')}</h2>
               <div className="category-list" aria-label={t('categoriesLabel')}>
                 <span className="category-list-label">{t('categoriesLabel')}</span>
-                <div className="category-links">
-                  {categoryKeys.map((key) => (
-                    <a className="category-chip" href={categoryWhatsAppHref(t(key))} key={key} target="_blank" rel="noreferrer">
-                      {t(key)} <ArrowUpRight size={13} aria-hidden="true" />
-                    </a>
+                <div className="category-links" role="group" aria-label={t('categoriesLabel')}>
+                  {categoryFilters.map(({ id, label }) => (
+                    <button
+                      className="category-chip"
+                      type="button"
+                      key={id}
+                      aria-pressed={activeCategory === id}
+                      onClick={() => setActiveCategory(id)}
+                    >
+                      {t(label)} <span className="category-chip-count">{id === 'all' ? products.length : products.filter((product) => product.category === id).length}</span>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -287,10 +359,11 @@ function App() {
                 <h2>{t('catalogTitle')}</h2>
                 <p className="section-description">{t('catalogDescription')}</p>
               </div>
-              <span className="catalog-count">{t('modelsAvailable', { count: products.length })}</span>
+              <span className="catalog-count">{t('modelsAvailable', { count: filteredProducts.length })}</span>
             </div>
             <div className="product-grid">
-              {products.map((product, index) => {
+              {filteredProducts.map((product) => {
+                const index = products.findIndex((item) => item.id === product.id)
                 const name = productName(product)
                 const isAdded = inquiry[product.id] !== undefined
                 return (
@@ -369,21 +442,6 @@ function App() {
             <a className="text-link reviews-link" href={site.googleMapsUrl} target="_blank" rel="noreferrer">
               {t('viewGoogleReviews')} <ArrowUpRight size={16} aria-hidden="true" />
             </a>
-          </div>
-        </section>
-
-        <section className="about-section" id="about">
-          <div className="page-width about-inner">
-            <div className="about-history" aria-label={t('aboutEyebrow')}>
-              <span>{t('aboutEyebrow')}</span>
-              <strong dir="ltr">2016</strong>
-            </div>
-            <div className="about-copy">
-              <p className="eyebrow"><span className="eyebrow-mark" />{t('aboutEyebrow')}</p>
-              <h2>{t('aboutTitle')}</h2>
-              <p>{t('aboutDescription')}</p>
-              <a className="text-link text-link-light" href="#contact">{t('contact')} <ArrowUpRight size={16} aria-hidden="true" /></a>
-            </div>
           </div>
         </section>
 
