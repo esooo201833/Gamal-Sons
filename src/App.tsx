@@ -2,12 +2,15 @@ import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import {
   ArrowDown,
   ArrowUpRight,
+  Clock3,
+  ClipboardList,
+  Globe2,
   MapPin,
   Menu,
   MessageCircle,
   Minus,
   Plus,
-  ShoppingBag,
+  Star,
   Trash2,
   X,
 } from 'lucide-react'
@@ -27,6 +30,13 @@ const languages: { code: Language; label: string; name: string }[] = [
   { code: 'fr', label: 'FR', name: 'Français' },
 ]
 const currentYear = new Date().getFullYear()
+const categoryKeys: TranslationKey[] = [
+  'categoryAbayas',
+  'categoryHomewear',
+  'categoryLingerie',
+  'categoryDresses',
+  'categoryOther',
+]
 
 const getInitialLanguage = (): Language => {
   try {
@@ -57,14 +67,17 @@ function App() {
   const selectedModels = products.filter((product) => inquiry[product.id] !== undefined)
   const selectedCount = selectedModels.length
   const totalUnits = Object.values(inquiry).reduce((sum, quantity) => sum + quantity, 0)
-  const heroProductIndex = 4
-  const heroProduct = products[heroProductIndex]
+  const heroProducts = ['201', '200', '199', '202'].flatMap((code) =>
+    products.filter((product) => product.modelCode === code),
+  )
   const productName = (product: (typeof products)[number]) =>
     product.modelCode ?? t('codeNeedsReview')
   const productInquiryLabel = (product: (typeof products)[number], index: number) =>
     product.modelCode
       ? `${t('modelCodePrefix')}: ${product.modelCode}`
       : t('unverifiedImageLabel', { number: String(index + 1).padStart(2, '0') })
+  const categoryWhatsAppHref = (category: string) =>
+    `${site.whatsappUrl}?text=${encodeURIComponent(t('categoryInquiryMessage', { category }))}`
 
   useEffect(() => {
     document.documentElement.lang = language
@@ -73,12 +86,16 @@ function App() {
     document.querySelector('meta[name="description"]')?.setAttribute('content', copy.metaDescription)
     document.querySelector('meta[property="og:title"]')?.setAttribute('content', copy.pageTitle)
     document.querySelector('meta[property="og:description"]')?.setAttribute('content', copy.metaDescription)
+    document.querySelector('meta[property="og:locale"]')?.setAttribute('content', language === 'ar' ? 'ar_EG' : language === 'fr' ? 'fr_FR' : 'en_US')
+    document.querySelector('meta[property="og:image:alt"]')?.setAttribute('content', copy.heroImageAlt)
+    document.querySelector('meta[name="twitter:title"]')?.setAttribute('content', copy.pageTitle)
+    document.querySelector('meta[name="twitter:description"]')?.setAttribute('content', copy.metaDescription)
     try {
       localStorage.setItem('awlad-gamal-language', language)
     } catch {
       return
     }
-  }, [copy.metaDescription, copy.pageTitle, direction, language])
+  }, [copy.heroImageAlt, copy.metaDescription, copy.pageTitle, direction, language])
 
   useEffect(() => {
     if (!drawerOpen) return
@@ -137,6 +154,11 @@ function App() {
     return `${site.whatsappUrl}?text=${encodeURIComponent(message)}`
   }
 
+  const productWhatsAppHref = (product: (typeof products)[number], index: number) => {
+    const message = t('productWhatsAppMessage', { name: productInquiryLabel(product, index) })
+    return `${site.whatsappUrl}?text=${encodeURIComponent(message)}`
+  }
+
   const handleDialogKeyDown = (event: KeyboardEvent<HTMLElement>) => {
     if (event.key === 'Escape') setDrawerOpen(false)
     if (event.key !== 'Tab') return
@@ -181,7 +203,7 @@ function App() {
           <div className="nav-actions">
             <LanguageSelector language={language} onChange={changeLanguage} className="desktop-language" />
             <button className="inquiry-nav" type="button" onClick={openDrawer} aria-label={t('inquiryCartCount', { count: selectedCount })}>
-              <ShoppingBag size={17} aria-hidden="true" />
+              <ClipboardList size={17} aria-hidden="true" />
               <span>{t('inquiryCart')}</span>
               <b>{selectedCount}</b>
             </button>
@@ -211,21 +233,44 @@ function App() {
               <p className="hero-note"><span />{t('heroNote')}</p>
             </div>
             <div className="hero-visual">
-              <div className="hero-image-frame">
-                <img src={heroProduct.image} alt={t('heroImageAlt')} width={heroProduct.width} height={heroProduct.height} fetchPriority="high" />
+              <div className="hero-image-frame" role="img" aria-label={t('heroImageAlt')}>
+                <div className="hero-composition-orbit" aria-hidden="true" />
+                {heroProducts.map((product, index) => (
+                  <img
+                    className={`hero-model hero-model-${index + 1}`}
+                    key={product.id}
+                    src={product.image}
+                    alt=""
+                    width={product.width}
+                    height={product.height}
+                    fetchPriority={index === 0 ? 'high' : undefined}
+                  />
+                ))}
+                <span className="hero-model-code" dir="ltr">
+                  {t('heroFeaturedModel', { code: heroProducts[0].modelCode ?? '' })}
+                </span>
               </div>
-              <div className="hero-caption"><span>{t('modelCodePrefix')}: {heroProduct.modelCode}</span><span>{String(heroProductIndex + 1).padStart(2, '0')} / {products.length}</span></div>
-              <div className="hero-side-note" aria-hidden="true">{t('heroSideNote')}</div>
+              <div className="hero-caption"><span>{t('heroSideNote')}</span><span>{t('heroModelsCaption')}</span></div>
             </div>
           </div>
-          <div className="hero-bottom page-width"><span>{t('heroLocation')}</span><span>{t('heroOffice')}</span><span>{t('heroCollectionLabel')}</span></div>
+          <div className="hero-bottom page-width"><span>{t('heroNote')}</span><span>{t('heroFounded')}</span><span>{t('heroLocation')}</span></div>
         </section>
 
         <section className="collection-intro section-pad" id="collection">
           <div className="page-width collection-intro-inner">
-            <div>
+            <div className="collection-intro-main">
               <p className="eyebrow eyebrow-dark"><span className="eyebrow-mark" />{t('collectionEyebrow')}</p>
               <h2>{t('collectionTitle')}</h2>
+              <div className="category-list" aria-label={t('categoriesLabel')}>
+                <span className="category-list-label">{t('categoriesLabel')}</span>
+                <div className="category-links">
+                  {categoryKeys.map((key) => (
+                    <a className="category-chip" href={categoryWhatsAppHref(t(key))} key={key} target="_blank" rel="noreferrer">
+                      {t(key)} <ArrowUpRight size={13} aria-hidden="true" />
+                    </a>
+                  ))}
+                </div>
+              </div>
             </div>
             <div className="intro-side">
               <p>{t('collectionDescription')}</p>
@@ -259,9 +304,9 @@ function App() {
                         {isAdded ? <span aria-hidden="true">✓</span> : <Plus size={17} aria-hidden="true" />}
                       </button>
                     </div>
-                    <button className="product-cta" type="button" onClick={() => addProduct(product.id)} aria-pressed={isAdded}>
-                      {isAdded ? t('added') : t('addInquiry')} <ArrowUpRight size={15} aria-hidden="true" />
-                    </button>
+                    <a className="product-cta" href={productWhatsAppHref(product, index)} target="_blank" rel="noreferrer">
+                      <span>{t('askModelWhatsApp')}</span><ArrowUpRight size={15} aria-hidden="true" />
+                    </a>
                   </article>
                 )
               })}
@@ -291,9 +336,48 @@ function App() {
           </div>
         </section>
 
+        <section className="reviews-section section-pad" id="reviews">
+          <div className="page-width">
+            <div className="reviews-heading">
+              <div>
+                <p className="eyebrow eyebrow-dark"><span className="eyebrow-mark" />{t('reviewsEyebrow')}</p>
+                <h2>{t('reviewsTitle')}</h2>
+                <p className="section-description">{t('reviewsDescription')}</p>
+              </div>
+              <div className="rating-summary" aria-label={t('googleRatingSummary')}>
+                <span className="rating-score">5.0</span>
+                <span className="rating-stars" aria-hidden="true">★★★★★</span>
+                <span className="rating-count">{t('googleReviewsCount')}</span>
+                <span className="rating-source">{t('googleRatingChecked')}</span>
+              </div>
+            </div>
+            <div className="reviews-grid">
+              {[
+                { author: t('reviewAuthorOne'), quote: t('reviewQuoteOne') },
+                { author: t('reviewAuthorTwo'), quote: t('reviewQuoteTwo') },
+              ].map((review) => (
+                <article className="review-card" key={review.author}>
+                  <div className="review-card-top">
+                    <span className="rating-stars" aria-label={t('fiveStarReview')}>★★★★★</span>
+                    <span className="review-source"><Star size={13} aria-hidden="true" /> Google</span>
+                  </div>
+                  <blockquote>{review.quote}</blockquote>
+                  <p className="review-author">{review.author}</p>
+                </article>
+              ))}
+            </div>
+            <a className="text-link reviews-link" href={site.googleMapsUrl} target="_blank" rel="noreferrer">
+              {t('viewGoogleReviews')} <ArrowUpRight size={16} aria-hidden="true" />
+            </a>
+          </div>
+        </section>
+
         <section className="about-section" id="about">
           <div className="page-width about-inner">
-            <div className="about-emblem"><img src="/assets/brand/awlad-gamal-logo-transparent.webp" alt="" width="180" height="180" loading="lazy" /></div>
+            <div className="about-history" aria-label={t('aboutEyebrow')}>
+              <span>{t('aboutEyebrow')}</span>
+              <strong dir="ltr">2016</strong>
+            </div>
             <div className="about-copy">
               <p className="eyebrow"><span className="eyebrow-mark" />{t('aboutEyebrow')}</p>
               <h2>{t('aboutTitle')}</h2>
@@ -311,6 +395,16 @@ function App() {
                 <h2>{t('contactTitle')}</h2>
               </div>
               <p>{t('contactDescription')}</p>
+            </div>
+            <div className="business-facts" aria-label={t('businessInfoLabel')}>
+              <div className="business-fact">
+                <span className="contact-icon"><Globe2 size={20} aria-hidden="true" /></span>
+                <span className="business-fact-copy"><strong>{t('shippingLabel')}</strong><small>{t('shippingWorldwide')}</small></span>
+              </div>
+              <div className="business-fact">
+                <span className="contact-icon"><Clock3 size={20} aria-hidden="true" /></span>
+                <span className="business-fact-copy"><strong>{t('officeHoursLabel')}</strong><small>{t('officeHoursValue')}</small></span>
+              </div>
             </div>
             <div className="contact-grid">
               <a className="contact-card contact-card-primary" href={site.whatsappUrl} target="_blank" rel="noreferrer">
@@ -360,7 +454,7 @@ function App() {
         <aside className="inquiry-drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title" onKeyDown={handleDialogKeyDown}>
           <div className="drawer-header"><div><p className="eyebrow eyebrow-dark"><span className="eyebrow-mark" />{t('inquiryCart')}</p><h2 id="drawer-title">{t('drawerTitle')}</h2></div><button ref={closeButtonRef} className="icon-button" type="button" onClick={() => setDrawerOpen(false)} aria-label={t('menuClose')}><X size={20} /></button></div>
           <p className="drawer-description">{t('drawerDescription')}</p>
-          {selectedModels.length === 0 ? <div className="drawer-empty"><ShoppingBag size={28} aria-hidden="true" /><p>{t('emptyInquiry')}</p><button className="text-link" type="button" onClick={() => { setDrawerOpen(false); document.querySelector('#latest')?.scrollIntoView({ behavior: 'smooth' }) }}>{t('browseModels')} <ArrowUpRight size={15} /></button></div> : <>
+          {selectedModels.length === 0 ?           <div className="drawer-empty"><ClipboardList size={28} aria-hidden="true" /><p>{t('emptyInquiry')}</p><button className="text-link" type="button" onClick={() => { setDrawerOpen(false); document.querySelector('#latest')?.scrollIntoView({ behavior: 'smooth' }) }}>{t('browseModels')} <ArrowUpRight size={15} /></button></div> : <>
             <div className="inquiry-items">
               {selectedModels.map((product) => {
                 const index = products.findIndex((item) => item.id === product.id)

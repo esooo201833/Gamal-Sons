@@ -7,7 +7,7 @@ export const site = {
   facebookUrl: 'https://www.facebook.com/groups/awlaad.gamal',
   telegramUrl: 'https://t.me/awladgmalllapaya',
   googleMapsUrl: 'https://goo.gl/maps/ZNhCTcYDc8cm1rZa9',
-  addressArabic: 'القاهرة، الموسكي، 33 جوهر القائد، عمارة البنداري، الدور الثالث علوي.',
-  addressEnglish: 'Cairo, Al-Musky, 33, Jawhar Al-Qaed, Al-Bandary Building, 3rd Floor.',
+  addressArabic: '33 شارع جوهر القائد، مبنى البنداري، الدور الثالث، الموسكي، القاهرة، مصر.',
+  addressEnglish: '33 Jawhar Al-Qaed Street, Al-Bandary Building, 3rd Floor, Al-Mouski, Cairo, Egypt.',
   addressFrench: '33, rue Jawhar Al-Qaed, immeuble Al-Bandary, 3e étage, Al-Mouski, Le Caire, Égypte.',
 } as const

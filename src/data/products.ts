@@ -7,7 +7,7 @@ export type Product = {
   modelCodeStatus: 'verified' | 'needs-review'
 }
 
-export const products: Product[] = [
+const existingProducts: Product[] = [
   { id: 'model-01', image: '/assets/products/processed/07006022-11f1-4466-a1a5-52e852c869df.webp', width: 681, height: 1024, modelCode: '248', modelCodeStatus: 'verified' },
   { id: 'model-02', image: '/assets/products/processed/199b697c-d613-43ad-8dc1-a6792bcc4f3f.webp', width: 681, height: 1024, modelCode: '001', modelCodeStatus: 'verified' },
   { id: 'model-03', image: '/assets/products/processed/3a92adac-e24b-4c4e-b068-ef6c00260713.webp', width: 682, height: 1024, modelCode: '434', modelCodeStatus: 'verified' },
@@ -25,3 +25,16 @@ export const products: Product[] = [
   { id: 'model-15', image: '/assets/products/processed/c6680890-a97a-449b-be91-ed82cac7543b.webp', width: 682, height: 1024, modelCode: '90', modelCodeStatus: 'verified' },
   { id: 'model-16', image: '/assets/products/processed/cf11d442-a6b3-46ec-8f47-932e39865353.webp', width: 681, height: 1024, modelCode: '381', modelCodeStatus: 'verified' },
 ]
+
+const telegramProducts: Product[] = [
+  { id: 'telegram-model-201', image: '/assets/products/processed/telegram-model-201.webp', width: 532, height: 800, modelCode: '201', modelCodeStatus: 'verified' },
+  { id: 'telegram-model-200', image: '/assets/products/processed/telegram-model-200.webp', width: 532, height: 800, modelCode: '200', modelCodeStatus: 'verified' },
+  { id: 'telegram-model-199', image: '/assets/products/processed/telegram-model-199.webp', width: 532, height: 800, modelCode: '199', modelCodeStatus: 'verified' },
+  { id: 'telegram-model-307', image: '/assets/products/processed/telegram-model-307.webp', width: 535, height: 800, modelCode: '307', modelCodeStatus: 'verified' },
+  { id: 'telegram-model-203', image: '/assets/products/processed/telegram-model-203.webp', width: 532, height: 800, modelCode: '203', modelCodeStatus: 'verified' },
+  { id: 'telegram-model-202', image: '/assets/products/processed/telegram-model-202.webp', width: 532, height: 800, modelCode: '202', modelCodeStatus: 'verified' },
+  { id: 'telegram-model-461', image: '/assets/products/processed/telegram-model-461.webp', width: 532, height: 800, modelCode: '461', modelCodeStatus: 'verified' },
+  { id: 'telegram-model-254', image: '/assets/products/processed/telegram-model-254.webp', width: 533, height: 800, modelCode: '254', modelCodeStatus: 'verified' },
+]
+
+export const products: Product[] = [...telegramProducts, ...existingProducts]
