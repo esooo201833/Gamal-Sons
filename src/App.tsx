@@ -20,12 +20,13 @@ import {
 } from 'lucide-react'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { SiFacebook, SiGooglemaps, SiTelegram, SiWhatsapp } from 'react-icons/si'
-import { site } from './config/site'
-import { products, type Product } from './data/products'
-import { translations, type Language } from './i18n/translations'
+import { type Product } from './data/products'
+import { defaultSiteContent, type SiteContent } from './data/site-content'
+import { translations as staticTranslations, type Language } from './i18n/translations'
+import AdminPortal from './components/AdminPortal'
 import './App.css'
 
-type TranslationKey = keyof typeof translations.en
+type TranslationKey = keyof typeof staticTranslations.en
 type Translate = (key: TranslationKey, values?: Record<string, string | number>) => string
 type Inquiry = Record<string, number>
 type ProductCategory = 'all' | Product['category']
@@ -46,6 +47,8 @@ const getInitialLanguage = (): Language => {
 }
 
 function App() {
+  const [siteContent, setSiteContent] = useState<SiteContent>(defaultSiteContent)
+  const [contentLoadError, setContentLoadError] = useState(false)
   const [language, setLanguage] = useState<Language>(getInitialLanguage)
   const [inquiry, setInquiry] = useState<Inquiry>({})
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -57,7 +60,9 @@ function App() {
   const closeButtonRef = useRef<HTMLButtonElement>(null)
   const returnFocusRef = useRef<HTMLElement | null>(null)
   const shouldReduceMotion = useReducedMotion()
-  const copy = translations[language]
+  const site = siteContent.site
+  const products = siteContent.products
+  const copy = siteContent.translations[language]
   const direction = language === 'ar' ? 'rtl' : 'ltr'
   const revealProps = shouldReduceMotion
     ? {}
@@ -77,10 +82,11 @@ function App() {
   const selectedModels = products.filter((product) => inquiry[product.id] !== undefined)
   const selectedCount = selectedModels.length
   const totalUnits = Object.values(inquiry).reduce((sum, quantity) => sum + quantity, 0)
-  const heroProducts = ['201', '200', '199', '202'].flatMap((code) =>
+  const featuredProducts = ['201', '200', '199', '202'].flatMap((code) =>
     products.filter((product) => product.modelCode === code),
   )
-  const activeHeroProduct = heroProducts[activeHeroIndex]
+  const heroProducts = featuredProducts.length ? featuredProducts : products.slice(0, 4)
+  const activeHeroProduct = heroProducts.length ? heroProducts[activeHeroIndex % heroProducts.length] : undefined
   const filteredProducts = activeCategory === 'all'
     ? products
     : products.filter((product) => product.category === activeCategory)
@@ -95,6 +101,35 @@ function App() {
     product.modelCode
       ? `${t('modelCodePrefix')}: ${product.modelCode}`
       : t('unverifiedImageLabel', { number: String(index + 1).padStart(2, '0') })
+
+  useEffect(() => {
+    let active = true
+    fetch('/api/site')
+      .then(async (response) => {
+        if (!response.ok) throw new Error(`تعذر تحميل محتوى الموقع (${response.status}).`)
+        return response.json() as Promise<SiteContent>
+      })
+      .then((content) => {
+        if (!active) return
+        setSiteContent(content)
+        setContentLoadError(false)
+      })
+      .catch((error: unknown) => {
+        console.error('Unable to load public site content:', error)
+        if (active && import.meta.env.PROD) setContentLoadError(true)
+      })
+    return () => {
+      active = false
+    }
+  }, [])
+
+  const handleAdminSave = (content: SiteContent) => {
+    setSiteContent(content)
+    setContentLoadError(false)
+    setInquiry((current) => Object.fromEntries(
+      Object.entries(current).filter(([id]) => content.products.some((product) => product.id === id)),
+    ))
+  }
 
   useEffect(() => {
     if (shouldReduceMotion || heroPaused || heroProducts.length < 2) return
@@ -145,6 +180,7 @@ function App() {
   }
 
   const changeHeroSlide = (step: number) => {
+    if (heroProducts.length === 0) return
     setActiveHeroIndex((index) => (index + step + heroProducts.length) % heroProducts.length)
   }
 
@@ -210,6 +246,7 @@ function App() {
     { href: '#about', label: t('about') },
     { href: '#collection', label: t('collection') },
     { href: '#latest', label: t('latest') },
+    { href: '#reviews', label: t('navReviews') },
     { href: '#contact', label: t('contact') },
   ]
 
@@ -219,7 +256,7 @@ function App() {
       <header className="site-header">
         <div className="nav-wrap">
           <a className="brand" href="#home" aria-label={t('logoAlt')}>
-            <img src="/assets/brand/awlad-gamal-logo-transparent.webp" width="56" height="56" alt="" />
+            <img src={site.brandLogoUrl} width="56" height="56" alt="" />
             <span className="brand-copy"><strong>{site.brandName}</strong><small>{site.brandNameArabic}</small></span>
           </a>
           <nav className={`primary-nav ${mobileMenuOpen ? 'is-open' : ''}`} aria-label={language === 'ar' ? 'التنقل الرئيسي' : language === 'fr' ? 'Navigation principale' : 'Main navigation'}>
@@ -246,9 +283,10 @@ function App() {
         </div>
       </header>
 
-      <SocialRail t={t} />
+      <SocialRail t={t} site={site} />
 
       <main id="main">
+        {contentLoadError && <p className="site-content-error" role="alert">تعذر تحميل آخر تحديثات الموقع. يتم عرض النسخة المتاحة حاليًا.</p>}
         <section className="hero-section" id="home">
           <div className="hero-inner page-width">
             <motion.div
@@ -266,7 +304,7 @@ function App() {
               </div>
               <p className="hero-note"><span />{t('heroNote')}</p>
             </motion.div>
-            <motion.div
+            {activeHeroProduct && <motion.div
               className="hero-visual"
               initial={shouldReduceMotion ? false : { opacity: 0, y: 16, scale: 0.985 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -320,7 +358,7 @@ function App() {
                 </div>
                 <span>{t('heroModelsCaption')}</span>
               </div>
-            </motion.div>
+            </motion.div>}
           </div>
           <div className="hero-bottom page-width"><span>{t('heroNote')}</span><span>{t('heroFounded')}</span><span>{t('heroLocation')}</span></div>
         </section>
@@ -328,7 +366,7 @@ function App() {
         <section className="about-section" id="about">
           <motion.div className="page-width about-inner" {...revealProps}>
             <div className="about-history">
-              <img src="/assets/brand/awlad-gamal-logo-transparent.webp" alt={t('aboutTitle')} />
+              <img src={site.brandLogoUrl} alt={t('aboutTitle')} />
             </div>
             <div className="about-copy">
               <p className="eyebrow"><span className="eyebrow-mark" />{t('aboutEyebrow')}</p>
@@ -459,6 +497,34 @@ function App() {
             <a className="text-link reviews-link" href={site.googleMapsUrl} target="_blank" rel="noreferrer">
               {t('viewGoogleReviews')} <ArrowUpRight size={16} aria-hidden="true" />
             </a>
+            {siteContent.reviewVideos.length > 0 && (
+              <div className="customer-videos">
+                <div className="customer-videos-heading">
+                  <h3>{t('customerVideosTitle')}</h3>
+                  <p>{t('customerVideosDescription')}</p>
+                </div>
+                <div className="customer-videos-grid">
+                  {siteContent.reviewVideos.map((videoUrl, index) => {
+                    const embedUrl = new URL('https://www.facebook.com/plugins/video.php')
+                    embedUrl.searchParams.set('href', videoUrl)
+                    embedUrl.searchParams.set('show_text', 'false')
+                    embedUrl.searchParams.set('width', '500')
+                    return (
+                      <article className="customer-video-card" key={videoUrl}>
+                        <iframe
+                          src={embedUrl.toString()}
+                          title={t('customerVideoLabel', { number: index + 1 })}
+                          loading="lazy"
+                          allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+                          allowFullScreen
+                          referrerPolicy="strict-origin-when-cross-origin"
+                        />
+                      </article>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         </section>
 
@@ -513,7 +579,7 @@ function App() {
       <footer className="site-footer">
         <motion.div className="page-width footer-main" {...revealProps}>
           <div className="footer-brand-block">
-            <a className="brand footer-brand" href="#home"><img src="/assets/brand/awlad-gamal-logo-transparent.webp" width="54" height="54" alt={t('logoAlt')} loading="lazy" /><span className="brand-copy"><strong>{site.brandName}</strong><small>{site.brandNameArabic}</small></span></a>
+            <a className="brand footer-brand" href="#home"><img src={site.brandLogoUrl} width="54" height="54" alt={t('logoAlt')} loading="lazy" /><span className="brand-copy"><strong>{site.brandName}</strong><small>{site.brandNameArabic}</small></span></a>
             <p>{t('footerAddress')}</p>
           </div>
           <div className="footer-column"><h3>{t('footerNavigate')}</h3>{navLinks.map((link) => <a href={link.href} key={link.href}>{link.label}</a>)}</div>
@@ -521,6 +587,8 @@ function App() {
         </motion.div>
         <div className="page-width footer-bottom"><span>© {currentYear} {site.brandName}. {t('copyright')}</span><span>{t('footerLocation')}</span></div>
       </footer>
+
+      <AdminPortal siteContent={siteContent} onSaved={handleAdminSave} />
 
       {notice && <div className="toast" role="status" aria-live="polite">{notice}</div>}
 
@@ -558,7 +626,7 @@ function LanguageSelector({ language, onChange, className = '' }: { language: La
   </div>
 }
 
-function SocialRail({ t }: { t: Translate }) {
+function SocialRail({ t, site }: { t: Translate; site: SiteContent['site'] }) {
   const links = [
     { href: site.facebookUrl, label: t('facebookContact'), shortLabel: t('railFacebook'), Icon: SiFacebook, platform: 'facebook' },
     { href: site.telegramUrl, label: t('telegramContact'), shortLabel: t('railTelegram'), Icon: SiTelegram, platform: 'telegram' },
