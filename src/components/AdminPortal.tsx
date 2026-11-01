@@ -486,7 +486,7 @@ export default function AdminPortal({ siteContent, onSaved }: Props) {
         <div className="admin-overlay" dir="rtl">
           <section className={`admin-window ${authenticated ? 'admin-window-full' : ''}`} role="dialog" aria-modal="true" aria-labelledby="admin-title">
             <header className="admin-topbar">
-              <a className="admin-mark" href="#home" onClick={closePanel} aria-label="العودة للموقع">
+              <a className="admin-mark" href="/" onClick={closePanel} aria-label="العودة للموقع">
                 <img src="/assets/brand/awlad-gamal-logo-transparent.webp" alt="" />
                 <span><strong>أولاد جمال</strong><small>إدارة الموقع</small></span>
               </a>

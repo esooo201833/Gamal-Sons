@@ -1,9 +1,6 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent as ReactMouseEvent } from 'react'
 import {
-  ArrowDown,
   ArrowUpRight,
-  ChevronLeft,
-  ChevronRight,
   Clock3,
   ClipboardList,
   Globe2,
@@ -11,14 +8,12 @@ import {
   Menu,
   MessageCircle,
   Minus,
-  Pause,
   Plus,
-  Play,
   Star,
   Trash2,
   X,
 } from 'lucide-react'
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
+import { motion, useReducedMotion } from 'motion/react'
 import { SiFacebook, SiGooglemaps, SiTelegram, SiWhatsapp } from 'react-icons/si'
 import {
   type Product,
@@ -33,8 +28,26 @@ import './App.css'
 type TranslationKey = keyof typeof staticTranslations.en
 type Translate = (key: TranslationKey, values?: Record<string, string | number>) => string
 type Inquiry = Record<string, number>
-type CategoryFilter = 'all' | ProductCategory
-type SubcategoryFilter = 'all' | ProductSubcategory
+type PageName = 'home' | 'about' | 'catalog' | 'category' | 'latest' | 'reviews' | 'contact' | 'not-found'
+type PageRoute = { page: PageName; categoryId?: ProductCategory }
+
+function resolvePageRoute(pathname: string): PageRoute {
+  const path = pathname.replace(/\/+$/, '') || '/'
+  if (path === '/' || path === '/home') return { page: 'home' }
+  if (path === '/about') return { page: 'about' }
+  if (path === '/catalog') return { page: 'catalog' }
+  if (path === '/latest') return { page: 'latest' }
+  if (path === '/reviews') return { page: 'reviews' }
+  if (path === '/contact') return { page: 'contact' }
+  if (path.startsWith('/catalog/')) {
+    try {
+      return { page: 'category', categoryId: decodeURIComponent(path.slice('/catalog/'.length)) }
+    } catch {
+      return { page: 'not-found' }
+    }
+  }
+  return { page: 'not-found' }
+}
 
 const languages: { code: Language; label: string; name: string }[] = [
   { code: 'ar', label: 'عربي', name: 'العربية' },
@@ -58,16 +71,18 @@ function App() {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [notice, setNotice] = useState('')
-  const [activeHeroIndex, setActiveHeroIndex] = useState(0)
-  const [heroPaused, setHeroPaused] = useState(false)
-  const [activeCategory, setActiveCategory] = useState<CategoryFilter>('all')
-  const [activeSubcategory, setActiveSubcategory] = useState<SubcategoryFilter>('all')
+  const [currentPath, setCurrentPath] = useState(() => window.location.pathname)
+  const [activeSubcategory, setActiveSubcategory] = useState<ProductSubcategory | 'all'>('all')
   const [sharingImages, setSharingImages] = useState(false)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
   const returnFocusRef = useRef<HTMLElement | null>(null)
   const shouldReduceMotion = useReducedMotion()
   const site = siteContent.site
   const products = siteContent.products
+  const route = resolvePageRoute(currentPath)
+  const currentCategory = route.page === 'category'
+    ? siteContent.categories.find((category) => category.id === route.categoryId)
+    : undefined
   const copy = siteContent.translations[language]
   const direction = language === 'ar' ? 'rtl' : 'ltr'
   const revealProps = shouldReduceMotion
@@ -88,26 +103,15 @@ function App() {
   const selectedModels = products.filter((product) => inquiry[product.id] !== undefined)
   const selectedCount = selectedModels.length
   const totalUnits = Object.values(inquiry).reduce((sum, quantity) => sum + quantity, 0)
-  const featuredProducts = ['201', '200', '199', '202'].flatMap((code) =>
-    products.filter((product) => product.modelCode === code),
-  )
-  const heroProducts = featuredProducts.length ? featuredProducts : products.slice(0, 4)
-  const activeHeroProduct = heroProducts.length ? heroProducts[activeHeroIndex % heroProducts.length] : undefined
-  const filteredProducts = activeCategory === 'all'
-    ? products
-    : products.filter((product) =>
-        product.category === activeCategory &&
+  const filteredProducts = route.page === 'category' && currentCategory
+    ? products.filter((product) =>
+        product.category === currentCategory.id &&
         (activeSubcategory === 'all' || product.subcategory === activeSubcategory),
       )
-  const categoryFilters: { id: ProductCategory; label: string }[] = siteContent.categories.map((category) => ({
-    id: category.id,
-    label: category.label[language],
-  }))
-  const activeSubcategories = activeCategory === 'all'
-    ? []
-    : siteContent.categories.find((category) => category.id === activeCategory)?.subcategories ?? []
+    : []
+  const activeSubcategories = currentCategory?.subcategories ?? []
   const productCategoryName = (category: ProductCategory) =>
-    categoryFilters.find((filter) => filter.id === category)?.label ?? ''
+    siteContent.categories.find((item) => item.id === category)?.label[language] ?? ''
   const categoryWhatsAppHref = (category: ProductCategory, subcategory?: ProductSubcategory) => {
     const categoryName = productCategoryName(category)
     const sectionName = siteContent.categories
@@ -124,6 +128,41 @@ function App() {
     product.modelCode
       ? `${t('modelCodePrefix')}: ${product.modelCode}`
       : t('unverifiedImageLabel', { number: String(index + 1).padStart(2, '0') })
+  const pageTitle = currentCategory?.label[language] ??
+    (route.page === 'catalog' ? t('catalog')
+      : route.page === 'latest' ? t('latest')
+        : route.page === 'about' ? t('about')
+          : route.page === 'reviews' ? t('navReviews')
+            : route.page === 'contact' ? t('contact')
+              : route.page === 'home' ? copy.pageTitle : t('pageNotFoundTitle'))
+
+  const navigate = (path: string) => {
+    if (path !== window.location.pathname) window.history.pushState({}, '', path)
+    setCurrentPath(window.location.pathname)
+    setMobileMenuOpen(false)
+    setActiveSubcategory('all')
+    window.scrollTo({ top: 0, behavior: 'auto' })
+  }
+
+  const handleInternalNavigation = (event: ReactMouseEvent<HTMLDivElement>) => {
+    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+    if (!(event.target instanceof Element)) return
+    const anchor = event.target.closest('a[href]')
+    if (!(anchor instanceof HTMLAnchorElement) || anchor.target || anchor.hasAttribute('download')) return
+    const url = new URL(anchor.href, window.location.href)
+    if (url.origin !== window.location.origin || url.hash) return
+    event.preventDefault()
+    navigate(`${url.pathname}${url.search}`)
+  }
+
+  useEffect(() => {
+    const syncPath = () => {
+      setCurrentPath(window.location.pathname)
+      setActiveSubcategory('all')
+    }
+    window.addEventListener('popstate', syncPath)
+    return () => window.removeEventListener('popstate', syncPath)
+  }, [])
 
   useEffect(() => {
     let active = true
@@ -146,11 +185,11 @@ function App() {
 
   const handleAdminSave = (content: SiteContent) => {
     setSiteContent(content)
-    if (activeCategory !== 'all' && !content.categories.some((category) => category.id === activeCategory)) {
-      setActiveCategory('all')
+    if (route.page === 'category' && !content.categories.some((category) => category.id === route.categoryId)) {
+      navigate('/catalog')
       setActiveSubcategory('all')
-    } else if (activeCategory !== 'all' && activeSubcategory !== 'all' &&
-      !content.categories.find((category) => category.id === activeCategory)
+    } else if (route.page === 'category' && activeSubcategory !== 'all' &&
+      !content.categories.find((category) => category.id === route.categoryId)
         ?.subcategories.some((subcategory) => subcategory.id === activeSubcategory)) {
       setActiveSubcategory('all')
     }
@@ -160,30 +199,22 @@ function App() {
   }
 
   useEffect(() => {
-    if (shouldReduceMotion || heroPaused || heroProducts.length < 2) return
-    const timer = window.setInterval(() => {
-      setActiveHeroIndex((index) => (index + 1) % heroProducts.length)
-    }, 5200)
-    return () => window.clearInterval(timer)
-  }, [heroPaused, heroProducts.length, shouldReduceMotion])
-
-  useEffect(() => {
     document.documentElement.lang = language
     document.documentElement.dir = direction
-    document.title = copy.pageTitle
+    document.title = route.page === 'home' ? copy.pageTitle : `${pageTitle} | ${copy.pageTitle}`
     document.querySelector('meta[name="description"]')?.setAttribute('content', copy.metaDescription)
-    document.querySelector('meta[property="og:title"]')?.setAttribute('content', copy.pageTitle)
+    document.querySelector('meta[property="og:title"]')?.setAttribute('content', document.title)
     document.querySelector('meta[property="og:description"]')?.setAttribute('content', copy.metaDescription)
     document.querySelector('meta[property="og:locale"]')?.setAttribute('content', language === 'ar' ? 'ar_EG' : language === 'fr' ? 'fr_FR' : 'en_US')
     document.querySelector('meta[property="og:image:alt"]')?.setAttribute('content', copy.heroImageAlt)
-    document.querySelector('meta[name="twitter:title"]')?.setAttribute('content', copy.pageTitle)
+    document.querySelector('meta[name="twitter:title"]')?.setAttribute('content', document.title)
     document.querySelector('meta[name="twitter:description"]')?.setAttribute('content', copy.metaDescription)
     try {
       localStorage.setItem('awlad-gamal-language', language)
     } catch {
       return
     }
-  }, [copy.heroImageAlt, copy.metaDescription, copy.pageTitle, direction, language])
+  }, [copy.heroImageAlt, copy.metaDescription, copy.pageTitle, direction, language, pageTitle, route.page])
 
   useEffect(() => {
     if (!drawerOpen) return
@@ -205,11 +236,6 @@ function App() {
   const changeLanguage = (nextLanguage: Language) => {
     setLanguage(nextLanguage)
     setMobileMenuOpen(false)
-  }
-
-  const changeHeroSlide = (step: number) => {
-    if (heroProducts.length === 0) return
-    setActiveHeroIndex((index) => (index + step + heroProducts.length) % heroProducts.length)
   }
 
   const openDrawer = () => {
@@ -326,25 +352,28 @@ function App() {
   }
 
   const navLinks = [
-    { href: '#home', label: t('home') },
-    { href: '#about', label: t('about') },
-    { href: '#collection', label: t('collection') },
-    { href: '#latest', label: t('latest') },
-    { href: '#reviews', label: t('navReviews') },
-    { href: '#contact', label: t('contact') },
+    { href: '/', label: t('home') },
+    { href: '/about', label: t('about') },
+    { href: '/catalog', label: t('catalog') },
+    { href: '/latest', label: t('latest') },
+    { href: '/reviews', label: t('navReviews') },
+    { href: '/contact', label: t('contact') },
   ]
 
   return (
-    <div className="site-shell" dir={direction}>
+    <div className="site-shell" dir={direction} onClick={handleInternalNavigation}>
       <a className="skip-link" href="#main">{language === 'ar' ? 'انتقلي إلى المحتوى' : language === 'fr' ? 'Aller au contenu' : 'Skip to content'}</a>
       <header className="site-header">
         <div className="nav-wrap">
-          <a className="brand" href="#home" aria-label={t('logoAlt')}>
+          <a className="brand" href="/" aria-label={t('logoAlt')}>
             <img src={site.brandLogoUrl} width="56" height="56" alt="" />
             <span className="brand-copy"><strong>{site.brandName}</strong><small>{site.brandNameArabic}</small></span>
           </a>
           <nav className={`primary-nav ${mobileMenuOpen ? 'is-open' : ''}`} aria-label={language === 'ar' ? 'التنقل الرئيسي' : language === 'fr' ? 'Navigation principale' : 'Main navigation'}>
-            {navLinks.map((link) => <a key={link.href} href={link.href} onClick={() => setMobileMenuOpen(false)}>{link.label}</a>)}
+            {navLinks.map((link) => <a key={link.href} href={link.href} aria-current={
+              currentPath === link.href ||
+              (route.page === 'category' && link.href === '/catalog') ? 'page' : undefined
+            }>{link.label}</a>)}
             <LanguageSelector language={language} onChange={changeLanguage} />
             <a className="mobile-contact-link" href={site.whatsappUrl} target="_blank" rel="noreferrer" aria-label={t('navWhatsApp')}>
               <MessageCircle size={16} aria-hidden="true" /> {t('navWhatsApp')}
@@ -370,8 +399,8 @@ function App() {
       <SocialRail t={t} site={site} />
 
       <main id="main">
-        <section className="hero-section" id="home">
-          <div className="hero-inner page-width">
+        {route.page === 'home' && <section className="hero-section" id="home">
+          <div className="hero-inner page-width home-brand-inner">
             <motion.div
               className="hero-copy"
               initial={shouldReduceMotion ? false : { opacity: 0, y: 20 }}
@@ -382,155 +411,136 @@ function App() {
               <h1>{t('heroTitle')}</h1>
               <p className="hero-description">{t('heroDescription')}</p>
               <div className="hero-actions">
-                <a className="button button-gold" href="#collection">{t('exploreCollection')} <ArrowDown size={16} aria-hidden="true" /></a>
-                <a className="button button-outline" href={site.whatsappUrl} target="_blank" rel="noreferrer"><MessageCircle size={17} aria-hidden="true" />{t('inquireWhatsApp')}</a>
+                <a className="button button-gold" href="/catalog">{t('exploreCollection')} <ArrowUpRight size={16} aria-hidden="true" /></a>
+                <a className="button button-outline" href="/about">{t('about')} <ArrowUpRight size={16} aria-hidden="true" /></a>
               </div>
               <p className="hero-note"><span />{t('heroNote')}</p>
             </motion.div>
-            {activeHeroProduct && <motion.div
-              className="hero-visual"
-              initial={shouldReduceMotion ? false : { opacity: 0, y: 16, scale: 0.985 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ duration: 0.75, ease: 'easeOut', delay: 0.18 }}
-            >
-              <div className="hero-image-frame" role="group" aria-label={t('heroImageAlt')}>
-                <div className="hero-composition-orbit" aria-hidden="true" />
-                <AnimatePresence mode="wait" initial={false}>
-                  <motion.img
-                    className="hero-carousel-image"
-                    key={activeHeroProduct.id}
-                    src={activeHeroProduct.image}
-                    alt=""
-                    width={activeHeroProduct.width}
-                    height={activeHeroProduct.height}
-                    fetchPriority={activeHeroIndex === 0 ? 'high' : undefined}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: shouldReduceMotion ? 0 : 0.55, ease: [0.22, 1, 0.36, 1] }}
-                  />
-                </AnimatePresence>
-                <span className="hero-model-code" dir="ltr">
-                  {t('heroFeaturedModel', { code: activeHeroProduct.modelCode ?? '' })}
-                </span>
-              </div>
-              <div className="hero-caption">
-                <span>{t('heroSideNote')}</span>
-                <div className="hero-slide-controls">
-                  <button type="button" className="hero-slide-arrow" onClick={() => setHeroPaused((paused) => !paused)} aria-label={t(heroPaused ? 'playSlideshow' : 'pauseSlideshow')}>
-                    {heroPaused ? <Play size={14} aria-hidden="true" /> : <Pause size={14} aria-hidden="true" />}
-                  </button>
-                  <button type="button" className="hero-slide-arrow" onClick={() => changeHeroSlide(-1)} aria-label={t('previousSlide')}>
-                    {direction === 'rtl' ? <ChevronRight size={17} aria-hidden="true" /> : <ChevronLeft size={17} aria-hidden="true" />}
-                  </button>
-                  <div className="hero-slide-dots" role="group" aria-label={t('heroCarouselLabel')}>
-                    {heroProducts.map((product, index) => (
-                      <button
-                        key={product.id}
-                        type="button"
-                        className="hero-slide-dot"
-                        aria-label={t('goToSlide', { number: index + 1 })}
-                        aria-pressed={index === activeHeroIndex}
-                        onClick={() => setActiveHeroIndex(index)}
-                      />
-                    ))}
-                  </div>
-                  <button type="button" className="hero-slide-arrow" onClick={() => changeHeroSlide(1)} aria-label={t('nextSlide')}>
-                    {direction === 'rtl' ? <ChevronLeft size={17} aria-hidden="true" /> : <ChevronRight size={17} aria-hidden="true" />}
-                  </button>
-                </div>
-                <span>{t('heroModelsCaption')}</span>
-              </div>
-            </motion.div>}
+            <motion.div className="home-brand-mark" {...revealProps}>
+              <img src={site.brandLogoUrl} alt={t('logoAlt')} />
+              <span>{site.brandNameArabic}</span>
+              <small>{t('heroFounded')} · {t('heroLocation')}</small>
+            </motion.div>
           </div>
           <div className="hero-bottom page-width"><span>{t('heroNote')}</span><span>{t('heroFounded')}</span><span>{t('heroLocation')}</span></div>
-        </section>
+        </section>}
 
-        <section className="about-section" id="about">
+        {route.page === 'about' && <section className="about-section page-section-pad" id="about">
           <motion.div className="page-width about-inner" {...revealProps}>
             <div className="about-history">
               <img src={site.brandLogoUrl} alt={t('aboutTitle')} />
             </div>
             <div className="about-copy">
               <p className="eyebrow"><span className="eyebrow-mark" />{t('aboutEyebrow')}</p>
-              <h2>{t('aboutTitle')}</h2>
+              <h1>{t('aboutTitle')}</h1>
               <p>{t('aboutDescription')}</p>
-              <a className="text-link text-link-light" href="#contact">{t('contact')} <ArrowUpRight size={16} aria-hidden="true" /></a>
+              <a className="text-link text-link-light" href="/contact">{t('contact')} <ArrowUpRight size={16} aria-hidden="true" /></a>
             </div>
           </motion.div>
-        </section>
+        </section>}
 
-        <section className="collection-intro section-pad" id="collection">
+        {route.page === 'about' && <section className="process-section section-pad">
+          <div className="page-width">
+            <motion.div className="section-heading centered-heading" {...revealProps}>
+              <p className="eyebrow eyebrow-dark"><span className="eyebrow-mark" />{t('processEyebrow')}</p>
+              <h2>{t('processTitle')}</h2>
+            </motion.div>
+            <motion.div className="process-grid" {...revealProps}>
+              {[
+                { number: '01', title: t('stepOneTitle'), description: t('stepOneDescription') },
+                { number: '02', title: t('stepTwoTitle'), description: t('stepTwoDescription') },
+                { number: '03', title: t('stepThreeTitle'), description: t('stepThreeDescription') },
+              ].map((step) => (
+                <article className="process-step" key={step.number}>
+                  <span className="step-number">{step.number}</span>
+                  <h3>{step.title}</h3>
+                  <p>{step.description}</p>
+                </article>
+              ))}
+            </motion.div>
+          </div>
+        </section>}
+
+        {route.page === 'catalog' && <section className="collection-intro section-pad" id="collection">
           <motion.div className="page-width collection-intro-inner" {...revealProps}>
             <div className="collection-intro-main">
               <p className="eyebrow eyebrow-dark"><span className="eyebrow-mark" />{t('collectionEyebrow')}</p>
-              <h2>{t('collectionTitle')}</h2>
-              <div className="category-list" aria-label={t('categoriesLabel')}>
-                <span className="category-list-label">{t('categoriesLabel')}</span>
-                <div className="category-links" role="group" aria-label={t('categoriesLabel')}>
-                  <button
-                    className="category-chip"
-                    type="button"
-                    aria-pressed={activeCategory === 'all'}
-                    onClick={() => { setActiveCategory('all'); setActiveSubcategory('all') }}
-                  >
-                    {t('categoryAll')} <span className="category-chip-count">{products.length}</span>
-                  </button>
-                  {categoryFilters.map(({ id, label }) => (
-                    <div className="category-option" key={id}>
-                      <button
-                        className="category-chip"
-                        type="button"
-                        aria-pressed={activeCategory === id}
-                        onClick={() => { setActiveCategory(id); setActiveSubcategory('all') }}
-                      >
-                        {label} <span className="category-chip-count">{products.filter((product) => product.category === id).length}</span>
-                      </button>
-                    </div>
-                  ))}
-                </div>
-                {activeCategory !== 'all' && (
-                  <div className="category-detail-panel">
-                    {activeSubcategories.length > 0 && (
-                      <div className="subcategory-links" role="group" aria-label={t('subcategoryAll')}>
-                        <button className="subcategory-chip" type="button" aria-pressed={activeSubcategory === 'all'} onClick={() => setActiveSubcategory('all')}>
-                          {t('subcategoryAll')}
-                        </button>
-                        {activeSubcategories.map((subcategory) => (
-                          <button
-                            className="subcategory-chip"
-                            type="button"
-                            key={subcategory.id}
-                            aria-pressed={activeSubcategory === subcategory.id}
-                            onClick={() => setActiveSubcategory(subcategory.id)}
-                          >
-                            {subcategory.label[language]}
-                            <span>{products.filter((product) => product.category === activeCategory && product.subcategory === subcategory.id).length}</span>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                    <a className="category-whatsapp-link" href={categoryWhatsAppHref(activeCategory, activeSubcategory === 'all' ? undefined : activeSubcategory)} target="_blank" rel="noreferrer">
-                      <MessageCircle size={16} aria-hidden="true" />{t('categoryWhatsAppCta')}
-                    </a>
-                  </div>
-                )}
-              </div>
+              <h1>{t('catalogTitle')}</h1>
+              <p className="section-description">{t('collectionDescription')}</p>
             </div>
             <div className="intro-side">
-              <p>{t('collectionDescription')}</p>
               <p className="minimum-order-notice">{t('minimumOrderNotice')}</p>
-              <a className="text-link" href="#latest">{t('latest')} <ArrowUpRight size={16} aria-hidden="true" /></a>
             </div>
           </motion.div>
-        </section>
+          <div className="page-width category-directory">
+            {siteContent.categories.map((category) => (
+              <a className="category-directory-card" href={`/catalog/${encodeURIComponent(category.id)}`} key={category.id}>
+                <span className="category-directory-count">{products.filter((product) => product.category === category.id).length}</span>
+                <h3>{category.label[language]}</h3>
+                <p>{category.subcategories.map((subcategory) => subcategory.label[language]).join(' · ') || t('modelsAvailable', { count: products.filter((product) => product.category === category.id).length })}</p>
+                <span className="category-directory-link">{t('viewCategory')} <ArrowUpRight size={16} aria-hidden="true" /></span>
+              </a>
+            ))}
+          </div>
+        </section>}
+
+        {route.page === 'latest' && <section className="collection-intro section-pad" id="latest">
+          <div className="page-width collection-intro-inner">
+            <div className="collection-intro-main">
+              <p className="eyebrow eyebrow-dark"><span className="eyebrow-mark" />{t('catalogEyebrow')}</p>
+              <h1>{t('latest')}</h1>
+              <p className="section-description">{t('catalogDescription')}</p>
+            </div>
+            <div className="intro-side">
+              <a className="button button-gold" href="/catalog">{t('catalog')} <ArrowUpRight size={16} aria-hidden="true" /></a>
+            </div>
+          </div>
+          <div className="page-width category-directory">
+            {siteContent.categories.map((category) => (
+              <a className="category-directory-card" href={`/catalog/${encodeURIComponent(category.id)}`} key={category.id}>
+                <span className="category-directory-count">{products.filter((product) => product.category === category.id).length}</span>
+                <h3>{category.label[language]}</h3>
+                <p>{category.subcategories.map((subcategory) => subcategory.label[language]).join(' · ') || t('modelsAvailable', { count: products.filter((product) => product.category === category.id).length })}</p>
+                <span className="category-directory-link">{t('viewCategory')} <ArrowUpRight size={16} aria-hidden="true" /></span>
+              </a>
+            ))}
+          </div>
+        </section>}
+
+        {route.page === 'category' && currentCategory && <>
+          <section className="collection-intro section-pad category-page-intro">
+            <div className="page-width collection-intro-inner">
+              <div className="collection-intro-main">
+                <a className="text-link category-back-link" href="/catalog">{t('catalog')} <ArrowUpRight size={16} aria-hidden="true" /></a>
+                <p className="eyebrow eyebrow-dark"><span className="eyebrow-mark" />{t('collectionEyebrow')}</p>
+                <h1>{currentCategory.label[language]}</h1>
+                {currentCategory.subcategories.length > 0 && <div className="subcategory-links" role="group" aria-label={t('subcategoryAll')}>
+                  <button className="subcategory-chip" type="button" aria-pressed={activeSubcategory === 'all'} onClick={() => setActiveSubcategory('all')}>
+                    {t('subcategoryAll')} <span>{products.filter((product) => product.category === currentCategory.id).length}</span>
+                  </button>
+                  {activeSubcategories.map((subcategory) => (
+                    <button className="subcategory-chip" type="button" key={subcategory.id} aria-pressed={activeSubcategory === subcategory.id} onClick={() => setActiveSubcategory(subcategory.id)}>
+                      {subcategory.label[language]}
+                      <span>{products.filter((product) => product.category === currentCategory.id && product.subcategory === subcategory.id).length}</span>
+                    </button>
+                  ))}
+                </div>}
+              </div>
+              <div className="intro-side category-page-actions">
+                <p>{t('minimumOrderNotice')}</p>
+                <a className="category-whatsapp-link" href={categoryWhatsAppHref(currentCategory.id, activeSubcategory === 'all' ? undefined : activeSubcategory)} target="_blank" rel="noreferrer">
+                  <MessageCircle size={16} aria-hidden="true" />{t('categoryWhatsAppCta')}
+                </a>
+              </div>
+            </div>
+          </section>
 
         <section className="catalog-section" id="latest">
           <div className="page-width">
             <motion.div className="catalog-heading" {...revealProps}>
               <div>
                 <p className="eyebrow eyebrow-dark"><span className="eyebrow-mark" />{t('catalogEyebrow')}</p>
-                <h2>{t('catalogTitle')}</h2>
+                <h2>{currentCategory.label[language]}</h2>
                 <p className="section-description">{t('catalogDescription')}</p>
               </div>
               <span className="catalog-count">{t('modelsAvailable', { count: filteredProducts.length })}</span>
@@ -561,35 +571,14 @@ function App() {
             </div>
           </div>
         </section>
+        </>}
 
-        <section className="process-section section-pad">
-          <div className="page-width">
-            <motion.div className="section-heading centered-heading" {...revealProps}>
-              <p className="eyebrow eyebrow-dark"><span className="eyebrow-mark" />{t('processEyebrow')}</p>
-              <h2>{t('processTitle')}</h2>
-            </motion.div>
-            <motion.div className="process-grid" {...revealProps}>
-              {[
-                { number: '01', title: t('stepOneTitle'), description: t('stepOneDescription') },
-                { number: '02', title: t('stepTwoTitle'), description: t('stepTwoDescription') },
-                { number: '03', title: t('stepThreeTitle'), description: t('stepThreeDescription') },
-              ].map((step) => (
-                <article className="process-step" key={step.number}>
-                  <span className="step-number">{step.number}</span>
-                  <h3>{step.title}</h3>
-                  <p>{step.description}</p>
-                </article>
-              ))}
-            </motion.div>
-          </div>
-        </section>
-
-        <section className="reviews-section section-pad" id="reviews">
+        {route.page === 'reviews' && <section className="reviews-section section-pad" id="reviews">
           <div className="page-width">
             <motion.div className="reviews-heading" {...revealProps}>
               <div>
                 <p className="eyebrow eyebrow-dark"><span className="eyebrow-mark" />{t('reviewsEyebrow')}</p>
-                <h2>{t('reviewsTitle')}</h2>
+                <h1>{t('reviewsTitle')}</h1>
                 <p className="section-description">{t('reviewsDescription')}</p>
               </div>
               <div className="rating-summary" aria-label={t('googleRatingSummary')}>
@@ -646,14 +635,14 @@ function App() {
               </div>
             )}
           </div>
-        </section>
+        </section>}
 
-        <section className="contact-section section-pad" id="contact">
+        {route.page === 'contact' && <section className="contact-section section-pad" id="contact">
           <div className="page-width">
             <motion.div className="contact-heading" {...revealProps}>
               <div>
                 <p className="eyebrow eyebrow-dark"><span className="eyebrow-mark" />{t('contactEyebrow')}</p>
-                <h2>{t('contactTitle')}</h2>
+                <h1>{t('contactTitle')}</h1>
               </div>
               <p>{t('contactDescription')}</p>
             </motion.div>
@@ -686,20 +675,29 @@ function App() {
               </div>
             </motion.div>
           </div>
-        </section>
+        </section>}
 
-        <section className="final-cta">
+        {route.page === 'contact' && <section className="final-cta">
           <motion.div className="page-width final-cta-inner" {...revealProps}>
             <div><p className="eyebrow"><span className="eyebrow-mark" />{t('heroEyebrow')}</p><h2>{t('finalTitle')}</h2><p>{t('finalDescription')}</p></div>
             <a className="button button-gold" href={site.whatsappUrl} target="_blank" rel="noreferrer">{t('finalButton')} <ArrowUpRight size={16} aria-hidden="true" /></a>
           </motion.div>
-        </section>
+        </section>}
+
+        {route.page === 'not-found' || route.page === 'category' && !currentCategory
+          ? <section className="page-not-found page-width">
+              <p className="eyebrow eyebrow-dark"><span className="eyebrow-mark" />{t('pageNotFoundEyebrow')}</p>
+              <h1>{t('pageNotFoundTitle')}</h1>
+              <p>{t('pageNotFoundDescription')}</p>
+              <a className="button button-gold" href="/">{t('home')} <ArrowUpRight size={16} aria-hidden="true" /></a>
+            </section>
+          : null}
       </main>
 
       <footer className="site-footer">
         <motion.div className="page-width footer-main" {...revealProps}>
           <div className="footer-brand-block">
-            <a className="brand footer-brand" href="#home"><img src={site.brandLogoUrl} width="54" height="54" alt={t('logoAlt')} loading="lazy" /><span className="brand-copy"><strong>{site.brandName}</strong><small>{site.brandNameArabic}</small></span></a>
+            <a className="brand footer-brand" href="/"><img src={site.brandLogoUrl} width="54" height="54" alt={t('logoAlt')} loading="lazy" /><span className="brand-copy"><strong>{site.brandName}</strong><small>{site.brandNameArabic}</small></span></a>
             <p>{t('footerAddress')}</p>
           </div>
           <div className="footer-column"><h3>{t('footerNavigate')}</h3>{navLinks.map((link) => <a href={link.href} key={link.href}>{link.label}</a>)}</div>

@@ -13,6 +13,8 @@ The site uses Vercel Functions for its admin API and Vercel Blob for shared cont
 3. Redeploy after creating the store and setting the variables.
 4. Open **دخول الإدارة** at the bottom of the site. Edits are saved to Blob and shared with all visitors.
 
+The public site uses separate routes for `/`, `/about`, `/catalog`, `/latest`, `/reviews`, and `/contact`. Each catalog category has its own `/catalog/:categoryId` route; Vercel rewrites these routes to the Vite app so direct links and refreshes continue to work.
+
 The login API rejects passwords shorter than 16 characters. Admin sessions use an HttpOnly, SameSite cookie and expire after eight hours. Do not send admin passwords or storage tokens in chat or commit them to the repository.
 
 ## Development
