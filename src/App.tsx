@@ -53,7 +53,6 @@ const getInitialLanguage = (): Language => {
 
 function App() {
   const [siteContent, setSiteContent] = useState<SiteContent>(defaultSiteContent)
-  const [contentLoadError, setContentLoadError] = useState(false)
   const [language, setLanguage] = useState<Language>(getInitialLanguage)
   const [inquiry, setInquiry] = useState<Inquiry>({})
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -109,8 +108,14 @@ function App() {
     : siteContent.categories.find((category) => category.id === activeCategory)?.subcategories ?? []
   const productCategoryName = (category: ProductCategory) =>
     categoryFilters.find((filter) => filter.id === category)?.label ?? ''
-  const categoryWhatsAppHref = (category: ProductCategory) => {
-    const message = t('categoryWhatsAppMessage', { name: productCategoryName(category) })
+  const categoryWhatsAppHref = (category: ProductCategory, subcategory?: ProductSubcategory) => {
+    const categoryName = productCategoryName(category)
+    const sectionName = siteContent.categories
+      .find((item) => item.id === category)
+      ?.subcategories.find((item) => item.id === subcategory)?.label[language]
+    const message = t('categoryWhatsAppMessage', {
+      name: sectionName ? `${categoryName} - ${sectionName}` : categoryName,
+    })
     return `${site.whatsappUrl}?text=${encodeURIComponent(message)}`
   }
   const productName = (product: (typeof products)[number]) =>
@@ -130,11 +135,9 @@ function App() {
       .then((content) => {
         if (!active) return
         setSiteContent(content)
-        setContentLoadError(false)
       })
       .catch((error: unknown) => {
         console.error('Unable to load public site content:', error)
-        if (active && import.meta.env.PROD) setContentLoadError(true)
       })
     return () => {
       active = false
@@ -143,7 +146,6 @@ function App() {
 
   const handleAdminSave = (content: SiteContent) => {
     setSiteContent(content)
-    setContentLoadError(false)
     if (activeCategory !== 'all' && !content.categories.some((category) => category.id === activeCategory)) {
       setActiveCategory('all')
       setActiveSubcategory('all')
@@ -368,7 +370,6 @@ function App() {
       <SocialRail t={t} site={site} />
 
       <main id="main">
-        {contentLoadError && <p className="site-content-error" role="alert">تعذر تحميل آخر تحديثات الموقع. يتم عرض النسخة المتاحة حاليًا.</p>}
         <section className="hero-section" id="home">
           <div className="hero-inner page-width">
             <motion.div
@@ -485,29 +486,33 @@ function App() {
                       >
                         {label} <span className="category-chip-count">{products.filter((product) => product.category === id).length}</span>
                       </button>
-                      <a className="category-whatsapp-link" href={categoryWhatsAppHref(id)} target="_blank" rel="noreferrer">
-                        <MessageCircle size={13} aria-hidden="true" />{t('categoryWhatsAppCta')}
-                      </a>
                     </div>
                   ))}
                 </div>
-                {activeSubcategories.length > 0 && (
-                  <div className="subcategory-links" role="group" aria-label={t('subcategoryAll')}>
-                    <button className="subcategory-chip" type="button" aria-pressed={activeSubcategory === 'all'} onClick={() => setActiveSubcategory('all')}>
-                      {t('subcategoryAll')}
-                    </button>
-                    {activeSubcategories.map((subcategory) => (
-                      <button
-                        className="subcategory-chip"
-                        type="button"
-                        key={subcategory.id}
-                        aria-pressed={activeSubcategory === subcategory.id}
-                        onClick={() => setActiveSubcategory(subcategory.id)}
-                      >
-                        {subcategory.label[language]}
-                        <span>{products.filter((product) => product.category === activeCategory && product.subcategory === subcategory.id).length}</span>
-                      </button>
-                    ))}
+                {activeCategory !== 'all' && (
+                  <div className="category-detail-panel">
+                    {activeSubcategories.length > 0 && (
+                      <div className="subcategory-links" role="group" aria-label={t('subcategoryAll')}>
+                        <button className="subcategory-chip" type="button" aria-pressed={activeSubcategory === 'all'} onClick={() => setActiveSubcategory('all')}>
+                          {t('subcategoryAll')}
+                        </button>
+                        {activeSubcategories.map((subcategory) => (
+                          <button
+                            className="subcategory-chip"
+                            type="button"
+                            key={subcategory.id}
+                            aria-pressed={activeSubcategory === subcategory.id}
+                            onClick={() => setActiveSubcategory(subcategory.id)}
+                          >
+                            {subcategory.label[language]}
+                            <span>{products.filter((product) => product.category === activeCategory && product.subcategory === subcategory.id).length}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    <a className="category-whatsapp-link" href={categoryWhatsAppHref(activeCategory, activeSubcategory === 'all' ? undefined : activeSubcategory)} target="_blank" rel="noreferrer">
+                      <MessageCircle size={16} aria-hidden="true" />{t('categoryWhatsAppCta')}
+                    </a>
                   </div>
                 )}
               </div>
