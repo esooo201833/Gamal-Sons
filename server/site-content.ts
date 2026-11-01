@@ -154,12 +154,24 @@ export function validateSiteContent(value: unknown): SiteContent {
       (item.height as number) > 10000 ||
       (item.modelCode !== null && (typeof item.modelCode !== 'string' || item.modelCode.length > 80)) ||
       (item.modelCodeStatus !== 'verified' && item.modelCodeStatus !== 'needs-review') ||
-      !isProductCategory(item.category, categories) ||
-      (item.subcategory !== undefined &&
-        item.subcategory !== null &&
-        !isProductSubcategory(item.category, item.subcategory, categories))
+      !isProductCategory(item.category, categories)
     ) {
       invalidContent(`بيانات الموديل رقم ${index + 1} غير صالحة.`)
+    }
+
+    const rawSubcategory = item.subcategory
+    let subcategory: Product['subcategory']
+    if (typeof rawSubcategory === 'string') {
+      if (!isProductSubcategory(item.category, rawSubcategory, categories)) {
+        invalidContent(`بيانات القسم في الموديل رقم ${index + 1} غير صالحة.`)
+      }
+      subcategory = rawSubcategory
+    } else if (rawSubcategory === null) {
+      subcategory = null
+    } else if (rawSubcategory === undefined) {
+      subcategory = undefined
+    } else {
+      invalidContent(`بيانات القسم في الموديل رقم ${index + 1} غير صالحة.`)
     }
 
     ids.add(item.id)
@@ -171,7 +183,7 @@ export function validateSiteContent(value: unknown): SiteContent {
       modelCode: item.modelCode as string | null,
       modelCodeStatus: item.modelCodeStatus,
       category: item.category,
-      ...(item.subcategory === undefined ? {} : { subcategory: item.subcategory }),
+      ...(subcategory === undefined ? {} : { subcategory }),
     }
   })
 

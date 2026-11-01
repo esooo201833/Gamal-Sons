@@ -19,6 +19,6 @@ The login API rejects passwords shorter than 16 characters. Admin sessions use a
 
 ## Development
 
-- `npm run dev` starts the Vite frontend with the built-in catalog defaults.
+- `npm run dev:vercel` starts the Vercel development server, including the admin API routes. Use the linked Vercel project's environment variables to log in and save changes locally.
+- `npm run dev` starts Vite only and does not provide API routes.
 - `npm run build` type-checks the frontend and Vercel API functions, then builds the site.
-- Use `vercel dev` with the project's environment variables to test the admin API locally.
