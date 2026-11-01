@@ -13,7 +13,12 @@ import {
   X,
 } from 'lucide-react'
 import type { Language } from '../i18n/translations'
-import type { Product } from '../data/products'
+import {
+  isProductCategory,
+  isProductSubcategory,
+  type Product,
+  type ProductSubcategory,
+} from '../data/products'
 import { isFacebookVideoUrl, type SiteContent, type SiteSettings, type TranslationKey } from '../data/site-content'
 import '../Admin.css'
 
@@ -29,6 +34,8 @@ const languageNames: Record<Language, string> = {
   en: 'English',
   fr: 'Français',
 }
+
+const emptyLocalizedLabel = (): Record<Language, string> => ({ ar: '', en: '', fr: '' })
 
 const siteFields: { key: keyof SiteSettings; label: string; group: 'brand' | 'links' | 'address' }[] = [
   { key: 'brandName', label: 'اسم العلامة بالإنجليزية', group: 'brand' },
@@ -112,6 +119,9 @@ export default function AdminPortal({ siteContent, onSaved }: Props) {
   const [uploadingProduct, setUploadingProduct] = useState<string | null>(null)
   const [newModelCode, setNewModelCode] = useState('')
   const [newModelCategory, setNewModelCategory] = useState<Product['category']>('abaya')
+  const [newModelSubcategory, setNewModelSubcategory] = useState<ProductSubcategory | ''>('')
+  const [newCategoryLabel, setNewCategoryLabel] = useState<Record<Language, string>>(emptyLocalizedLabel)
+  const [newSubcategoryLabels, setNewSubcategoryLabels] = useState<Record<string, Record<Language, string>>>({})
   const [newModelFile, setNewModelFile] = useState<File | null>(null)
   const [newReviewVideoUrl, setNewReviewVideoUrl] = useState('')
 
@@ -166,6 +176,98 @@ export default function AdminPortal({ siteContent, onSaved }: Props) {
         return updated
       }),
     }))
+  }
+
+  const updateCategoryLabel = (id: string, language: Language, value: string) => {
+    setDraft((current) => ({
+      ...current,
+      categories: current.categories.map((category) => category.id === id
+        ? { ...category, label: { ...category.label, [language]: value } }
+        : category),
+    }))
+  }
+
+  const updateSubcategoryLabel = (categoryId: string, subcategoryId: string, language: Language, value: string) => {
+    setDraft((current) => ({
+      ...current,
+      categories: current.categories.map((category) => category.id === categoryId
+        ? {
+            ...category,
+            subcategories: category.subcategories.map((subcategory) => subcategory.id === subcategoryId
+              ? { ...subcategory, label: { ...subcategory.label, [language]: value } }
+              : subcategory),
+          }
+        : category),
+    }))
+  }
+
+  const addCategory = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (Object.values(newCategoryLabel).some((label) => !label.trim())) {
+      setError('أدخل اسم الفئة باللغات الثلاث.')
+      return
+    }
+    const category: SiteContent['categories'][number] = {
+      id: `category-${crypto.randomUUID()}`,
+      label: {
+        ar: newCategoryLabel.ar.trim(),
+        en: newCategoryLabel.en.trim(),
+        fr: newCategoryLabel.fr.trim(),
+      },
+      subcategories: [],
+    }
+    setDraft((current) => ({ ...current, categories: [...current.categories, category] }))
+    setNewCategoryLabel(emptyLocalizedLabel())
+    setError('')
+  }
+
+  const addSubcategory = (categoryId: string) => {
+    const label = newSubcategoryLabels[categoryId] ?? emptyLocalizedLabel()
+    if (Object.values(label).some((value) => !value.trim())) {
+      setError('أدخل اسم القسم باللغات الثلاث.')
+      return
+    }
+    const subcategory: SiteContent['categories'][number]['subcategories'][number] = {
+      id: `section-${crypto.randomUUID()}`,
+      label: { ar: label.ar.trim(), en: label.en.trim(), fr: label.fr.trim() },
+    }
+    setDraft((current) => ({
+      ...current,
+      categories: current.categories.map((category) => category.id === categoryId
+        ? { ...category, subcategories: [...category.subcategories, subcategory] }
+        : category),
+    }))
+    setNewSubcategoryLabels((current) => ({ ...current, [categoryId]: emptyLocalizedLabel() }))
+    setError('')
+  }
+
+  const removeCategory = (categoryId: string) => {
+    if (draft.categories.length <= 1) {
+      setError('يجب الإبقاء على فئة واحدة على الأقل.')
+      return
+    }
+    if (draft.products.some((product) => product.category === categoryId)) {
+      setError('انقل موديلات الفئة إلى فئة أخرى قبل حذفها.')
+      return
+    }
+    const categories = draft.categories.filter((category) => category.id !== categoryId)
+    if (newModelCategory === categoryId && categories[0]) setNewModelCategory(categories[0].id)
+    setDraft((current) => ({ ...current, categories }))
+    setError('')
+  }
+
+  const removeSubcategory = (categoryId: string, subcategoryId: string) => {
+    if (draft.products.some((product) => product.category === categoryId && product.subcategory === subcategoryId)) {
+      setError('انقل الموديلات إلى قسم آخر قبل حذف هذا القسم.')
+      return
+    }
+    setDraft((current) => ({
+      ...current,
+      categories: current.categories.map((category) => category.id === categoryId
+        ? { ...category, subcategories: category.subcategories.filter((subcategory) => subcategory.id !== subcategoryId) }
+        : category),
+    }))
+    setError('')
   }
 
   const uploadProductImage = async (file: File): Promise<{ image: string; width: number; height: number }> => {
@@ -226,6 +328,10 @@ export default function AdminPortal({ siteContent, onSaved }: Props) {
   const addProduct = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const form = event.currentTarget
+    if (!isProductCategory(newModelCategory, draft.categories)) {
+      setError('اختر فئة صالحة للموديل.')
+      return
+    }
     if (!newModelFile) {
       setError('اختر صورة للموديل قبل إضافته.')
       return
@@ -242,9 +348,11 @@ export default function AdminPortal({ siteContent, onSaved }: Props) {
         modelCode,
         modelCodeStatus: modelCode ? 'verified' : 'needs-review',
         category: newModelCategory,
+        subcategory: newModelSubcategory || null,
       }
       setDraft((current) => ({ ...current, products: [product, ...current.products] }))
       setNewModelCode('')
+      setNewModelSubcategory('')
       setNewModelFile(null)
       form.reset()
     } catch (uploadError) {
@@ -461,15 +569,61 @@ export default function AdminPortal({ siteContent, onSaved }: Props) {
                   {tab === 'products' && (
                     <div className="admin-section-content">
                       <div className="admin-section-intro">
-                        <div><h2>الموديلات الحالية</h2><p>غيّر كود الموديل أو فئته، ارفع صورة جديدة، أو احذف ما لم يعد متاحًا.</p></div>
+                        <div><h2>الفئات والأقسام والموديلات</h2><p>أدر الفئات وأقسام كل فئة منفردة، ثم اربط كل موديل بتصنيفه المناسب.</p></div>
                         <span className="admin-count">{draft.products.length} موديل</span>
                       </div>
+
+                      <section className="admin-category-manager" aria-label="إدارة الفئات والأقسام">
+                        <h3>الفئات والأقسام الحالية</h3>
+                        {draft.categories.map((category) => (
+                          <article className="admin-category-card" key={category.id}>
+                            <div className="admin-category-heading">
+                              <div className="admin-localized-fields">
+                                {(['ar', 'en', 'fr'] as const).map((locale) => (
+                                  <label key={locale}>{`اسم الفئة · ${languageNames[locale]}`}<input value={category.label[locale]} onChange={(event) => updateCategoryLabel(category.id, locale, event.target.value)} /></label>
+                                ))}
+                              </div>
+                              <button className="admin-delete-product" type="button" onClick={() => removeCategory(category.id)} aria-label={`حذف الفئة ${category.label.ar}`}><Trash2 size={16} /></button>
+                            </div>
+                            <div className="admin-subcategory-list">
+                              {category.subcategories.map((subcategory) => (
+                                <div className="admin-subcategory-row" key={subcategory.id}>
+                                  <div className="admin-localized-fields">
+                                    {(['ar', 'en', 'fr'] as const).map((locale) => (
+                                      <label key={locale}>{`اسم القسم · ${languageNames[locale]}`}<input value={subcategory.label[locale]} onChange={(event) => updateSubcategoryLabel(category.id, subcategory.id, locale, event.target.value)} /></label>
+                                    ))}
+                                  </div>
+                                  <button className="admin-delete-product" type="button" onClick={() => removeSubcategory(category.id, subcategory.id)} aria-label={`حذف القسم ${subcategory.label.ar}`}><Trash2 size={16} /></button>
+                                </div>
+                              ))}
+                            </div>
+                            <div className="admin-add-subcategory">
+                              <div className="admin-localized-fields">
+                                {(['ar', 'en', 'fr'] as const).map((locale) => (
+                                  <label key={locale}>{`قسم جديد · ${languageNames[locale]}`}<input value={newSubcategoryLabels[category.id]?.[locale] ?? ''} onChange={(event) => setNewSubcategoryLabels((current) => ({ ...current, [category.id]: { ...(current[category.id] ?? emptyLocalizedLabel()), [locale]: event.target.value } }))} /></label>
+                                ))}
+                              </div>
+                              <button className="admin-add-product" type="button" onClick={() => addSubcategory(category.id)}><Plus size={15} /> إضافة قسم</button>
+                            </div>
+                          </article>
+                        ))}
+                        <form className="admin-new-category" onSubmit={addCategory}>
+                          <h4>إضافة فئة جديدة</h4>
+                          <div className="admin-localized-fields">
+                            {(['ar', 'en', 'fr'] as const).map((locale) => (
+                              <label key={locale}>{`اسم الفئة · ${languageNames[locale]}`}<input value={newCategoryLabel[locale]} onChange={(event) => setNewCategoryLabel((current) => ({ ...current, [locale]: event.target.value }))} /></label>
+                            ))}
+                          </div>
+                          <button className="admin-add-product" type="submit"><Plus size={15} /> إضافة فئة</button>
+                        </form>
+                      </section>
 
                       <form className="admin-new-product" onSubmit={addProduct}>
                         <div className="admin-new-product-heading"><span className="admin-new-icon"><Plus size={17} /></span><div><h3>إضافة موديل جديد</h3><p>ارفع صورة واضحة بصيغة JPG أو PNG أو WebP، بحد أقصى 3 ميجابايت.</p></div></div>
                         <div className="admin-new-product-fields">
                           <label>كود الموديل<input value={newModelCode} onChange={(event) => setNewModelCode(event.target.value)} placeholder="مثال: 248" /></label>
-                          <label>الفئة<select value={newModelCategory} onChange={(event) => setNewModelCategory(event.target.value as Product['category'])}><option value="abaya">عباية</option><option value="isdaal">إسدال</option></select></label>
+                          <label>الفئة<select value={newModelCategory} onChange={(event) => { if (isProductCategory(event.target.value, draft.categories)) { setNewModelCategory(event.target.value); setNewModelSubcategory('') } }}>{draft.categories.map((category) => <option key={category.id} value={category.id}>{category.label.ar}</option>)}</select></label>
+                          <label>القسم<select value={newModelSubcategory} onChange={(event) => { const subcategory = event.target.value; if (isProductSubcategory(newModelCategory, subcategory, draft.categories)) { setNewModelSubcategory(subcategory) } else { setNewModelSubcategory('') } }}><option value="">بدون قسم فرعي</option>{draft.categories.find((category) => category.id === newModelCategory)?.subcategories.map((subcategory) => <option key={subcategory.id} value={subcategory.id}>{subcategory.label.ar}</option>)}</select></label>
                           <label className="admin-file-input"><ImagePlus size={16} />{newModelFile ? newModelFile.name : 'اختيار صورة'}<input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => setNewModelFile(event.currentTarget.files?.[0] ?? null)} /></label>
                           <button className="admin-add-product" type="submit" disabled={saving}><Plus size={16} /> إضافة</button>
                         </div>
@@ -487,7 +641,8 @@ export default function AdminPortal({ siteContent, onSaved }: Props) {
                             </div>
                             <div className="admin-product-fields">
                               <label><span>كود الموديل</span><input value={product.modelCode ?? ''} onChange={(event) => updateProduct(product.id, { modelCode: event.target.value.trim() || null })} placeholder={`موديل ${index + 1}`} /></label>
-                              <label><span>الفئة</span><select value={product.category} onChange={(event) => updateProduct(product.id, { category: event.target.value as Product['category'] })}><option value="abaya">عباية</option><option value="isdaal">إسدال</option></select></label>
+                              <label><span>الفئة</span><select value={product.category} onChange={(event) => { if (isProductCategory(event.target.value, draft.categories)) updateProduct(product.id, { category: event.target.value, subcategory: null }) }}>{draft.categories.map((category) => <option key={category.id} value={category.id}>{category.label.ar}</option>)}</select></label>
+                              <label><span>القسم</span><select value={product.subcategory ?? ''} onChange={(event) => { const subcategory = event.target.value; updateProduct(product.id, { subcategory: isProductSubcategory(product.category, subcategory, draft.categories) ? subcategory : null }) }}><option value="">بدون قسم فرعي</option>{draft.categories.find((category) => category.id === product.category)?.subcategories.map((subcategory) => <option key={subcategory.id} value={subcategory.id}>{subcategory.label.ar}</option>)}</select></label>
                             </div>
                             <span className="admin-upload-status" aria-live="polite">{uploadingProduct === product.id ? 'جارٍ رفع الصورة…' : ''}</span>
                             <button className="admin-delete-product" type="button" onClick={() => removeProduct(product.id)} aria-label={`حذف الموديل ${product.modelCode ?? index + 1}`}><Trash2 size={17} /></button>

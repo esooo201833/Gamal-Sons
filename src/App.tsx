@@ -20,7 +20,11 @@ import {
 } from 'lucide-react'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { SiFacebook, SiGooglemaps, SiTelegram, SiWhatsapp } from 'react-icons/si'
-import { type Product } from './data/products'
+import {
+  type Product,
+  type ProductCategory,
+  type ProductSubcategory,
+} from './data/products'
 import { defaultSiteContent, type SiteContent } from './data/site-content'
 import { translations as staticTranslations, type Language } from './i18n/translations'
 import AdminPortal from './components/AdminPortal'
@@ -29,7 +33,8 @@ import './App.css'
 type TranslationKey = keyof typeof staticTranslations.en
 type Translate = (key: TranslationKey, values?: Record<string, string | number>) => string
 type Inquiry = Record<string, number>
-type ProductCategory = 'all' | Product['category']
+type CategoryFilter = 'all' | ProductCategory
+type SubcategoryFilter = 'all' | ProductSubcategory
 
 const languages: { code: Language; label: string; name: string }[] = [
   { code: 'ar', label: 'عربي', name: 'العربية' },
@@ -56,7 +61,9 @@ function App() {
   const [notice, setNotice] = useState('')
   const [activeHeroIndex, setActiveHeroIndex] = useState(0)
   const [heroPaused, setHeroPaused] = useState(false)
-  const [activeCategory, setActiveCategory] = useState<ProductCategory>('all')
+  const [activeCategory, setActiveCategory] = useState<CategoryFilter>('all')
+  const [activeSubcategory, setActiveSubcategory] = useState<SubcategoryFilter>('all')
+  const [sharingImages, setSharingImages] = useState(false)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
   const returnFocusRef = useRef<HTMLElement | null>(null)
   const shouldReduceMotion = useReducedMotion()
@@ -89,12 +96,23 @@ function App() {
   const activeHeroProduct = heroProducts.length ? heroProducts[activeHeroIndex % heroProducts.length] : undefined
   const filteredProducts = activeCategory === 'all'
     ? products
-    : products.filter((product) => product.category === activeCategory)
-  const categoryFilters: { id: ProductCategory; label: TranslationKey }[] = [
-    { id: 'all', label: 'categoryAll' },
-    { id: 'abaya', label: 'categoryAbayas' },
-    { id: 'isdaal', label: 'categoryIsdaal' },
-  ]
+    : products.filter((product) =>
+        product.category === activeCategory &&
+        (activeSubcategory === 'all' || product.subcategory === activeSubcategory),
+      )
+  const categoryFilters: { id: ProductCategory; label: string }[] = siteContent.categories.map((category) => ({
+    id: category.id,
+    label: category.label[language],
+  }))
+  const activeSubcategories = activeCategory === 'all'
+    ? []
+    : siteContent.categories.find((category) => category.id === activeCategory)?.subcategories ?? []
+  const productCategoryName = (category: ProductCategory) =>
+    categoryFilters.find((filter) => filter.id === category)?.label ?? ''
+  const categoryWhatsAppHref = (category: ProductCategory) => {
+    const message = t('categoryWhatsAppMessage', { name: productCategoryName(category) })
+    return `${site.whatsappUrl}?text=${encodeURIComponent(message)}`
+  }
   const productName = (product: (typeof products)[number]) =>
     product.modelCode ?? t('codeNeedsReview')
   const productInquiryLabel = (product: (typeof products)[number], index: number) =>
@@ -126,6 +144,14 @@ function App() {
   const handleAdminSave = (content: SiteContent) => {
     setSiteContent(content)
     setContentLoadError(false)
+    if (activeCategory !== 'all' && !content.categories.some((category) => category.id === activeCategory)) {
+      setActiveCategory('all')
+      setActiveSubcategory('all')
+    } else if (activeCategory !== 'all' && activeSubcategory !== 'all' &&
+      !content.categories.find((category) => category.id === activeCategory)
+        ?.subcategories.some((subcategory) => subcategory.id === activeSubcategory)) {
+      setActiveSubcategory('all')
+    }
     setInquiry((current) => Object.fromEntries(
       Object.entries(current).filter(([id]) => content.products.some((product) => product.id === id)),
     ))
@@ -211,7 +237,7 @@ function App() {
   const whatsappHref = () => {
     const lines = selectedModels.map((product) => {
       const index = products.findIndex((item) => item.id === product.id)
-      return `- ${productInquiryLabel(product, index)} × ${inquiry[product.id]}`
+      return `- ${productInquiryLabel(product, index)} × ${inquiry[product.id]}\n  ${absoluteProductImageUrl(product)}`
     })
     const message = lines.length
       ? `${t('whatsappMessage')}\n\n${lines.join('\n')}`
@@ -219,9 +245,65 @@ function App() {
     return `${site.whatsappUrl}?text=${encodeURIComponent(message)}`
   }
 
+  const shareCartInquiry = () => {
+    if (selectedCount > 0 && totalUnits < 12) return
+    if (selectedModels.length === 0) {
+      window.location.assign(whatsappHref())
+      return
+    }
+    const message = selectedModels.map((product) => {
+      const index = products.findIndex((item) => item.id === product.id)
+      return `- ${productInquiryLabel(product, index)} × ${inquiry[product.id]}\n  ${absoluteProductImageUrl(product)}`
+    })
+    void shareProductImages(
+      selectedModels,
+      message.length ? `${t('whatsappMessage')}\n\n${message.join('\n')}` : t('generalWhatsAppMessage'),
+      whatsappHref(),
+    )
+  }
+
   const productWhatsAppHref = (product: (typeof products)[number], index: number) => {
-    const message = t('productWhatsAppMessage', { name: productInquiryLabel(product, index) })
+    const imageUrl = new URL(product.image, window.location.origin).toString()
+    const message = `${t('productWhatsAppMessage', { name: productInquiryLabel(product, index) })}\n${imageUrl}`
     return `${site.whatsappUrl}?text=${encodeURIComponent(message)}`
+  }
+
+  const absoluteProductImageUrl = (product: Product) =>
+    new URL(product.image, window.location.origin).toString()
+
+  const shareProductImages = async (items: Product[], message: string, fallbackHref: string) => {
+    const fallbackToWhatsApp = () => window.location.assign(fallbackHref)
+    if (!navigator.share || !navigator.canShare || items.length > 10) {
+      fallbackToWhatsApp()
+      return
+    }
+
+    setSharingImages(true)
+    try {
+      const files = await Promise.all(items.map(async (product) => {
+        const response = await fetch(absoluteProductImageUrl(product))
+        if (!response.ok) throw new Error(`تعذر تحميل صورة الموديل ${product.modelCode ?? product.id}.`)
+        const blob = await response.blob()
+        return new File([blob], `${product.id}.${blob.type.split('/')[1] || 'jpg'}`, { type: blob.type })
+      }))
+      if (!navigator.canShare({ files })) {
+        fallbackToWhatsApp()
+        return
+      }
+      await navigator.share({ files, text: message, title: t('inquiryCart') })
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') return
+      console.error('Unable to share product images:', error)
+      fallbackToWhatsApp()
+    } finally {
+      setSharingImages(false)
+    }
+  }
+
+  const shareProductInquiry = (product: Product, index: number) => {
+    const imageUrl = absoluteProductImageUrl(product)
+    const message = `${t('productWhatsAppMessage', { name: productInquiryLabel(product, index) })}\n${imageUrl}`
+    void shareProductImages([product], message, productWhatsAppHref(product, index))
   }
 
   const handleDialogKeyDown = (event: KeyboardEvent<HTMLElement>) => {
@@ -385,22 +467,54 @@ function App() {
               <div className="category-list" aria-label={t('categoriesLabel')}>
                 <span className="category-list-label">{t('categoriesLabel')}</span>
                 <div className="category-links" role="group" aria-label={t('categoriesLabel')}>
+                  <button
+                    className="category-chip"
+                    type="button"
+                    aria-pressed={activeCategory === 'all'}
+                    onClick={() => { setActiveCategory('all'); setActiveSubcategory('all') }}
+                  >
+                    {t('categoryAll')} <span className="category-chip-count">{products.length}</span>
+                  </button>
                   {categoryFilters.map(({ id, label }) => (
-                    <button
-                      className="category-chip"
-                      type="button"
-                      key={id}
-                      aria-pressed={activeCategory === id}
-                      onClick={() => setActiveCategory(id)}
-                    >
-                      {t(label)} <span className="category-chip-count">{id === 'all' ? products.length : products.filter((product) => product.category === id).length}</span>
-                    </button>
+                    <div className="category-option" key={id}>
+                      <button
+                        className="category-chip"
+                        type="button"
+                        aria-pressed={activeCategory === id}
+                        onClick={() => { setActiveCategory(id); setActiveSubcategory('all') }}
+                      >
+                        {label} <span className="category-chip-count">{products.filter((product) => product.category === id).length}</span>
+                      </button>
+                      <a className="category-whatsapp-link" href={categoryWhatsAppHref(id)} target="_blank" rel="noreferrer">
+                        <MessageCircle size={13} aria-hidden="true" />{t('categoryWhatsAppCta')}
+                      </a>
+                    </div>
                   ))}
                 </div>
+                {activeSubcategories.length > 0 && (
+                  <div className="subcategory-links" role="group" aria-label={t('subcategoryAll')}>
+                    <button className="subcategory-chip" type="button" aria-pressed={activeSubcategory === 'all'} onClick={() => setActiveSubcategory('all')}>
+                      {t('subcategoryAll')}
+                    </button>
+                    {activeSubcategories.map((subcategory) => (
+                      <button
+                        className="subcategory-chip"
+                        type="button"
+                        key={subcategory.id}
+                        aria-pressed={activeSubcategory === subcategory.id}
+                        onClick={() => setActiveSubcategory(subcategory.id)}
+                      >
+                        {subcategory.label[language]}
+                        <span>{products.filter((product) => product.category === activeCategory && product.subcategory === subcategory.id).length}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
             <div className="intro-side">
               <p>{t('collectionDescription')}</p>
+              <p className="minimum-order-notice">{t('minimumOrderNotice')}</p>
               <a className="text-link" href="#latest">{t('latest')} <ArrowUpRight size={16} aria-hidden="true" /></a>
             </div>
           </motion.div>
@@ -417,6 +531,7 @@ function App() {
               <span className="catalog-count">{t('modelsAvailable', { count: filteredProducts.length })}</span>
             </motion.div>
             <div className="product-grid">
+              {filteredProducts.length === 0 && <p className="catalog-empty">{t('emptyCategoryModels')}</p>}
               {filteredProducts.map((product) => {
                 const index = products.findIndex((item) => item.id === product.id)
                 const name = productName(product)
@@ -432,9 +547,9 @@ function App() {
                         {isAdded ? <span aria-hidden="true">✓</span> : <Plus size={17} aria-hidden="true" />}
                       </button>
                     </div>
-                    <a className="product-cta" href={productWhatsAppHref(product, index)} target="_blank" rel="noreferrer">
+                    <button className="product-cta" type="button" onClick={() => shareProductInquiry(product, index)} disabled={sharingImages}>
                       <span>{t('askModelWhatsApp')}</span><ArrowUpRight size={15} aria-hidden="true" />
-                    </a>
+                    </button>
                   </article>
                 )
               })}
@@ -611,9 +726,10 @@ function App() {
               })}
             </div>
             <div className="drawer-summary"><span>{t('totalUnits')}</span><strong>{totalUnits}</strong></div>
+            {totalUnits < 12 && <p className="drawer-minimum-hint" role="status">{t('minimumOrderHint')}</p>}
             <button className="clear-button" type="button" onClick={() => setInquiry({})} disabled={!selectedCount}>{t('clearInquiry')}</button>
           </>}
-          <div className="drawer-footer"><a className="button button-gold drawer-send" href={whatsappHref()} target="_blank" rel="noreferrer"><MessageCircle size={18} aria-hidden="true" />{selectedCount ? t('sendInquiry') : t('generalInquiry')}</a></div>
+          <div className="drawer-footer"><button className="button button-gold drawer-send" type="button" onClick={shareCartInquiry} disabled={sharingImages || (selectedCount > 0 && totalUnits < 12)}><MessageCircle size={18} aria-hidden="true" />{selectedCount ? t('sendInquiry') : t('generalInquiry')}</button></div>
         </aside>
       </div>}
     </div>

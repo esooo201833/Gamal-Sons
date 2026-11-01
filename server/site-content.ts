@@ -2,7 +2,12 @@ import { randomUUID } from 'node:crypto'
 import { list, put } from '@vercel/blob'
 import { defaultSiteContent, isFacebookVideoUrl, type SiteContent, type SiteSettings, type TranslationKey } from '../src/data/site-content.js'
 import type { Language } from '../src/i18n/translations.js'
-import type { Product } from '../src/data/products.js'
+import {
+  isProductCategory,
+  isProductSubcategory,
+  type Product,
+  type ProductCategoryDefinition,
+} from '../src/data/products.js'
 
 const CONTENT_PATH = 'cms/site-content.json'
 const SITE_KEYS = Object.keys(defaultSiteContent.site) as (keyof SiteSettings)[]
@@ -75,6 +80,62 @@ export function validateSiteContent(value: unknown): SiteContent {
     translations[language] = copy
   }
 
+  const rawCategories = value.categories === undefined ? defaultSiteContent.categories : value.categories
+  if (!Array.isArray(rawCategories) || rawCategories.length < 1 || rawCategories.length > 100) {
+    invalidContent('قائمة الفئات غير صالحة.')
+  }
+  const categoryIds = new Set<string>()
+  const categories: ProductCategoryDefinition[] = rawCategories.map((item, index) => {
+    if (
+      !isRecord(item) ||
+      typeof item.id !== 'string' ||
+      !/^[a-zA-Z0-9_-]{1,100}$/.test(item.id) ||
+      categoryIds.has(item.id) ||
+      !isRecord(item.label) ||
+      !Array.isArray(item.subcategories) ||
+      item.subcategories.length > 100
+    ) {
+      invalidContent(`بيانات الفئة رقم ${index + 1} غير صالحة.`)
+    }
+
+    const label = {} as ProductCategoryDefinition['label']
+    for (const language of LANGUAGES) {
+      const localizedLabel = item.label[language]
+      if (typeof localizedLabel !== 'string' || !localizedLabel.trim() || localizedLabel.length > 100) {
+        invalidContent(`اسم الفئة رقم ${index + 1} غير صالح.`)
+      }
+      label[language] = localizedLabel.trim()
+    }
+
+    categoryIds.add(item.id)
+    const subcategoryIds = new Set<string>()
+    const subcategories = item.subcategories.map((subcategory, subcategoryIndex) => {
+      if (
+        !isRecord(subcategory) ||
+        typeof subcategory.id !== 'string' ||
+        !/^[a-zA-Z0-9_-]{1,100}$/.test(subcategory.id) ||
+        subcategoryIds.has(subcategory.id) ||
+        !isRecord(subcategory.label)
+      ) {
+        invalidContent(`بيانات القسم رقم ${subcategoryIndex + 1} في الفئة "${item.id}" غير صالحة.`)
+      }
+
+      const subcategoryLabel = {} as ProductCategoryDefinition['label']
+      for (const language of LANGUAGES) {
+        const localizedLabel = subcategory.label[language]
+        if (typeof localizedLabel !== 'string' || !localizedLabel.trim() || localizedLabel.length > 100) {
+          invalidContent(`اسم القسم رقم ${subcategoryIndex + 1} في الفئة "${item.id}" غير صالح.`)
+        }
+        subcategoryLabel[language] = localizedLabel.trim()
+      }
+
+      subcategoryIds.add(subcategory.id)
+      return { id: subcategory.id, label: subcategoryLabel }
+    })
+
+    return { id: item.id, label, subcategories }
+  })
+
   if (value.products.length > 500) invalidContent('لا يمكن أن يزيد الكتالوج عن 500 موديل.')
   const ids = new Set<string>()
   const products: Product[] = value.products.map((item, index) => {
@@ -93,7 +154,10 @@ export function validateSiteContent(value: unknown): SiteContent {
       (item.height as number) > 10000 ||
       (item.modelCode !== null && (typeof item.modelCode !== 'string' || item.modelCode.length > 80)) ||
       (item.modelCodeStatus !== 'verified' && item.modelCodeStatus !== 'needs-review') ||
-      (item.category !== 'abaya' && item.category !== 'isdaal')
+      !isProductCategory(item.category, categories) ||
+      (item.subcategory !== undefined &&
+        item.subcategory !== null &&
+        !isProductSubcategory(item.category, item.subcategory, categories))
     ) {
       invalidContent(`بيانات الموديل رقم ${index + 1} غير صالحة.`)
     }
@@ -107,6 +171,7 @@ export function validateSiteContent(value: unknown): SiteContent {
       modelCode: item.modelCode as string | null,
       modelCodeStatus: item.modelCodeStatus,
       category: item.category,
+      ...(item.subcategory === undefined ? {} : { subcategory: item.subcategory }),
     }
   })
 
@@ -122,7 +187,7 @@ export function validateSiteContent(value: unknown): SiteContent {
     return video
   })
 
-  return { site, products, reviewVideos: validatedReviewVideos, translations }
+  return { site, products, categories, reviewVideos: validatedReviewVideos, translations }
 }
 
 export async function readSiteContent(): Promise<SiteContent> {

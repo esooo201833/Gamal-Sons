@@ -1,5 +1,5 @@
 import { site } from '../config/site.js'
-import { products, type Product } from './products.js'
+import { productCategoryDefinitions, products, type Product, type ProductCategoryDefinition } from './products.js'
 import { translations, type Language } from '../i18n/translations.js'
 
 export type TranslationKey = keyof typeof translations.en
@@ -11,6 +11,7 @@ export type EditableTranslations = {
 export type SiteContent = {
   site: SiteSettings
   products: Product[]
+  categories: ProductCategoryDefinition[]
   reviewVideos: string[]
   translations: EditableTranslations
 }
@@ -37,6 +38,14 @@ export function isFacebookVideoUrl(value: string): boolean {
 export const defaultSiteContent: SiteContent = {
   site: { ...site },
   products: [...products],
+  categories: productCategoryDefinitions.map((category) => ({
+    ...category,
+    label: { ...category.label },
+    subcategories: category.subcategories.map((subcategory) => ({
+      ...subcategory,
+      label: { ...subcategory.label },
+    })),
+  })),
   reviewVideos: [],
   translations: {
     ar: { ...translations.ar },
