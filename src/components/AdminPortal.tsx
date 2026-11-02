@@ -28,7 +28,7 @@ type Props = {
   onSaved: (content: SiteContent) => void
 }
 
-type AdminTab = 'overview' | 'products' | 'videos' | 'links' | 'copy'
+type AdminTab = 'overview' | 'products' | 'reviews' | 'links' | 'copy'
 
 const languageNames: Record<Language, string> = {
   ar: 'العربية',
@@ -513,7 +513,7 @@ export default function AdminPortal({ siteContent, onSaved }: Props) {
                   {([
                     ['overview', 'نظرة عامة'],
                     ['products', 'الموديلات'],
-                    ['videos', 'فيديوهات التقييمات'],
+                    ['reviews', 'تقييمات العملاء'],
                     ['links', 'الروابط والعنوان'],
                     ['copy', 'النصوص والترجمات'],
                   ] as const).map(([id, label]) => (
@@ -534,7 +534,7 @@ export default function AdminPortal({ siteContent, onSaved }: Props) {
                       <h1 id="admin-title">
                         {tab === 'overview' ? 'أهلاً بك في لوحة الإدارة' :
                           tab === 'products' ? 'كتالوج الموديلات' :
-                            tab === 'videos' ? 'فيديوهات تقييمات العملاء' :
+                            tab === 'reviews' ? 'تقييمات العملاء' :
                             tab === 'links' ? 'بيانات التواصل والموقع' : 'محتوى الموقع'}
                       </h1>
                     </div>
@@ -560,7 +560,7 @@ export default function AdminPortal({ siteContent, onSaved }: Props) {
                       </div>
                       <div className="admin-quick-actions">
                         <button type="button" onClick={() => setTab('products')}><ImagePlus size={19} /><span><strong>إدارة الموديلات</strong><small>إضافة الصور أو تعديل الكتالوج</small></span><ArrowUpRight size={16} /></button>
-                        <button type="button" onClick={() => setTab('videos')}><Play size={19} /><span><strong>فيديوهات تقييمات العملاء</strong><small>أضف أو احذف فيديوهات Facebook</small></span><ArrowUpRight size={16} /></button>
+                        <button type="button" onClick={() => setTab('reviews')}><Play size={19} /><span><strong>تقييمات العملاء</strong><small>إدارة فيديوهات وآراء العملاء</small></span><ArrowUpRight size={16} /></button>
                         <button type="button" onClick={() => setTab('copy')}><span className="admin-quick-type">Aa</span><span><strong>تعديل النصوص</strong><small>كل النصوص باللغات الثلاث</small></span><ArrowUpRight size={16} /></button>
                         <button type="button" onClick={() => setTab('links')}><ArrowUpRight size={19} /><span><strong>تحديث بيانات التواصل</strong><small>الأرقام والعناوين والروابط</small></span><ArrowUpRight size={16} /></button>
                       </div>
@@ -655,13 +655,15 @@ export default function AdminPortal({ siteContent, onSaved }: Props) {
                     </div>
                   )}
 
-                  {tab === 'videos' && (
+                  {tab === 'reviews' && (
                     <div className="admin-section-content">
                       <div className="admin-section-intro">
-                        <div><h2>فيديوهات تقييمات العملاء</h2><p>أضف رابط فيديو عام من Facebook ليظهر مضمّنًا في قسم آراء العملاء بالموقع.</p></div>
+                        <div><h2>تقييمات العملاء</h2><p>تظهر فيديوهات العملاء ضمن صفحة التقييمات على الموقع. أضف رابط فيديو عام من Facebook أو احذف فيديو موجودًا.</p></div>
                         <span className="admin-count">{draft.reviewVideos.length} / 50 فيديو</span>
                       </div>
 
+                      <section className="admin-fields-card">
+                        <h3>فيديوهات تقييمات العملاء</h3>
                       <form className="admin-new-product admin-new-review-video" onSubmit={addReviewVideo}>
                         <div className="admin-new-product-heading">
                           <span className="admin-new-icon"><Play size={17} /></span>
@@ -684,6 +686,7 @@ export default function AdminPortal({ siteContent, onSaved }: Props) {
                         {draft.reviewVideos.length === 0 && <p className="admin-empty">لا توجد فيديوهات بعد. أضف رابط فيديو Facebook من النموذج أعلاه.</p>}
                       </div>
                       <p className="admin-save-note"><Check size={15} /> اضغط «حفظ التعديلات» ليظهر الفيديو للزوار. يجب أن يكون الفيديو عامًا ومسموحًا بتضمينه.</p>
+                      </section>
                     </div>
                   )}
 
