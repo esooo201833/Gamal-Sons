@@ -20,6 +20,7 @@ export const productCategoryDefinitions: ProductCategoryDefinition[] = [
       { id: 'abaya-reception', label: localized('عبايات استقبال', 'Reception abayas', 'Abayas de réception') },
     ],
   },
+  { id: 'abaya-jeans', label: localized('عبايات جينز', 'Denim abayas', 'Abayas en jean'), subcategories: [] },
   {
     id: 'winter',
     label: localized('الملابس الشتوي', 'Winter clothing', 'Vêtements d’hiver'),
