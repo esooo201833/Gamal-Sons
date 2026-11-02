@@ -141,10 +141,22 @@ export default function AdminPortal({ siteContent, onSaved }: Props) {
       })
       .then((body: unknown) => {
         if (active && body !== null && typeof body === 'object' && 'authenticated' in body) {
-          setAuthenticated(body.authenticated === true)
-          if (body.authenticated === true && 'username' in body && typeof body.username === 'string') {
-            setUsername(body.username)
+          if (body.authenticated === true) {
+            if ('username' in body && typeof body.username === 'string') {
+              setUsername(body.username)
+            }
+            return backendFetch('/api/admin/content')
+              .then(async (response) => {
+                const content = await readJson(response)
+                if (!response.ok) throw new Error(messageFrom(response, content))
+                if (active && content !== null) {
+                  const savedContent = content as SiteContent
+                  setDraft(structuredClone(savedContent))
+                }
+                if (active) setAuthenticated(true)
+              })
           }
+          setAuthenticated(false)
         }
       })
       .catch((requestError: unknown) => {
@@ -482,7 +494,12 @@ export default function AdminPortal({ siteContent, onSaved }: Props) {
         throw new Error('استجابة تسجيل الدخول غير صالحة.')
       }
       setAdminSessionToken(body.token)
-      setDraft(structuredClone(siteContent))
+      const contentResponse = await backendFetch('/api/admin/content')
+      const content = await readJson(contentResponse)
+      if (!contentResponse.ok) throw new Error(messageFrom(contentResponse, content))
+      const savedContent = content === null ? siteContent : content as SiteContent
+      setDraft(structuredClone(savedContent))
+      onSaved(savedContent)
       setPassword('')
       setAuthenticated(true)
     } catch (loginError) {
