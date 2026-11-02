@@ -532,10 +532,6 @@ async function handleUpload(request: Request, origin: string | null): Promise<Re
 }
 
 async function handleContent(request: Request, origin: string | null): Promise<Response> {
-  if (request.method === 'GET') {
-    if (!await authenticated(request)) throw new RequestError(401, 'سجّل الدخول إلى لوحة الإدارة أولًا.')
-    return await handleSite(origin)
-  }
   if (request.method !== 'PUT') throw new RequestError(405, 'الطريقة غير مدعومة.')
   if (!await authenticated(request)) throw new RequestError(401, 'سجّل الدخول إلى لوحة الإدارة أولًا.')
   let rawContent: unknown

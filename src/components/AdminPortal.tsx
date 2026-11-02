@@ -145,7 +145,7 @@ export default function AdminPortal({ siteContent, onSaved }: Props) {
             if ('username' in body && typeof body.username === 'string') {
               setUsername(body.username)
             }
-            return backendFetch('/api/admin/content')
+            return backendFetch('/api/site')
               .then(async (response) => {
                 const content = await readJson(response)
                 if (!response.ok) throw new Error(messageFrom(response, content))
@@ -494,7 +494,7 @@ export default function AdminPortal({ siteContent, onSaved }: Props) {
         throw new Error('استجابة تسجيل الدخول غير صالحة.')
       }
       setAdminSessionToken(body.token)
-      const contentResponse = await backendFetch('/api/admin/content')
+      const contentResponse = await backendFetch('/api/site')
       const content = await readJson(contentResponse)
       if (!contentResponse.ok) throw new Error(messageFrom(contentResponse, content))
       const savedContent = content === null ? siteContent : content as SiteContent
