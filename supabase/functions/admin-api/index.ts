@@ -218,7 +218,7 @@ async function currentCredentials(): Promise<{ username: string; stored: StoredC
   if (stored) return { username: stored.username, stored }
   const username = Deno.env.get('ADMIN_USERNAME')
   const password = Deno.env.get('ADMIN_PASSWORD')
-  if (!username || !password || password.length < 16) {
+  if (!username || !password || password.length < 8) {
     throw new Error('Admin credentials are not configured correctly.')
   }
   return { username, stored: null }
@@ -480,8 +480,8 @@ async function handleAccount(request: Request, origin: string | null): Promise<R
   if (username.length < 3 || username.length > 120 || username !== body.username) {
     throw new RequestError(400, 'اسم المستخدم يجب أن يكون من 3 إلى 120 حرفًا وبدون مسافات في البداية أو النهاية.')
   }
-  if (body.password.length < 16 || body.password.length > 200) {
-    throw new RequestError(400, 'كلمة المرور الجديدة يجب أن تكون من 16 إلى 200 حرف.')
+  if (body.password.length < 8 || body.password.length > 200) {
+    throw new RequestError(400, 'كلمة المرور الجديدة يجب أن تكون من 8 إلى 200 حرف.')
   }
   if (body.password !== body.confirmPassword) {
     throw new RequestError(400, 'تأكيد كلمة المرور غير مطابق.')

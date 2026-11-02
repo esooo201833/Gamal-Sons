@@ -19,7 +19,7 @@ Vercel hosts only the static Vite website. Supabase provides the site-content da
    The function disables Supabase JWT verification because it authenticates the admin with its own short-lived signed session. Database and Storage access remain server-side using the Supabase service-role key.
 3. Configure these Edge Function secrets in Supabase:
    - `ADMIN_USERNAME`: the admin login name.
-   - `ADMIN_PASSWORD`: a unique password of at least 16 characters.
+   - `ADMIN_PASSWORD`: a unique password of at least 8 characters.
    - `ADMIN_SESSION_SECRET`: a random secret of at least 32 characters.
    - `ALLOWED_ORIGINS`: comma-separated exact origins allowed to call the function, such as the production Vercel URL and `http://localhost:5173`. Add the custom domain and any preview origins you use.
    - `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are provided by the Supabase Edge Function runtime. Never expose the service-role key in the browser or Vercel.
@@ -35,7 +35,7 @@ Vercel hosts only the static Vite website. Supabase provides the site-content da
    - `VITE_SUPABASE_URL`: the Supabase project URL.
    - `VITE_SUPABASE_ANON_KEY`: the Supabase publishable/anon key. This public key is safe to include in the site; the database has no anonymous write policy.
 5. Apply the migrations before deploying the Edge Function. Open **دخول الإدارة** at the bottom of the site. Product images go to the public `site-assets` bucket, and saved content goes to the `site_content` table.
-6. To change the admin username and password later, sign in and open **إعدادات الحساب**. The update requires the current password and a new password of at least 16 characters. The new password is stored as a salted PBKDF2 hash in the private `admin_credentials` table, and other active sessions are invalidated; the initial login continues to use the `ADMIN_USERNAME` and `ADMIN_PASSWORD` secrets until the first successful account change.
+6. To change the admin username and password later, sign in and open **إعدادات الحساب**. The update requires the current password and a new password of at least 8 characters. The new password is stored as a salted PBKDF2 hash in the private `admin_credentials` table, and other active sessions are invalidated; the initial login continues to use the `ADMIN_USERNAME` and `ADMIN_PASSWORD` secrets until the first successful account change.
 
 The migration creates a public image bucket and a private-to-the-Edge-Function content table. Product images are public because visitors and WhatsApp need to load them. Admin sessions last eight hours and are kept in the current browser tab.
 

@@ -609,14 +609,14 @@ export default function AdminPortal({ siteContent, onSaved }: Props) {
                   {tab === 'account' && (
                     <section className="admin-section-content">
                       <div className="admin-section-intro">
-                        <div><h2>تغيير بيانات الدخول</h2><p>أدخل كلمة المرور الحالية لتأكيد هويتك. كلمة المرور الجديدة يجب ألا تقل عن 16 حرفًا.</p></div>
+                        <div><h2>تغيير بيانات الدخول</h2><p>أدخل كلمة المرور الحالية لتأكيد هويتك. كلمة المرور الجديدة يجب ألا تقل عن 8 أحرف.</p></div>
                       </div>
                       <form className="admin-fields-card" onSubmit={saveAccountSettings}>
                         <div className="admin-settings-grid">
                           <label>اسم المستخدم الجديد<input autoComplete="username" value={username} onChange={(event) => setUsername(event.target.value)} minLength={3} maxLength={120} required /></label>
                           <label>كلمة المرور الحالية<input autoComplete="current-password" type="password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} maxLength={200} required /></label>
-                          <label>كلمة المرور الجديدة<input autoComplete="new-password" type="password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} minLength={16} maxLength={200} required /></label>
-                          <label>تأكيد كلمة المرور الجديدة<input autoComplete="new-password" type="password" value={confirmNewPassword} onChange={(event) => setConfirmNewPassword(event.target.value)} minLength={16} maxLength={200} required /></label>
+                          <label>كلمة المرور الجديدة<input autoComplete="new-password" type="password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} minLength={8} maxLength={200} required /></label>
+                          <label>تأكيد كلمة المرور الجديدة<input autoComplete="new-password" type="password" value={confirmNewPassword} onChange={(event) => setConfirmNewPassword(event.target.value)} minLength={8} maxLength={200} required /></label>
                         </div>
                         {accountNotice && <p className="admin-account-notice" role="status">{accountNotice}</p>}
                         <button className="admin-save admin-account-submit" type="submit" disabled={saving}>
