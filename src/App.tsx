@@ -356,7 +356,6 @@ function App() {
     { href: '/', label: t('home') },
     { href: '/about', label: t('about') },
     { href: '/catalog', label: t('catalog') },
-    { href: '/latest', label: t('latest') },
     { href: '/reviews', label: t('navReviews') },
     { href: '/contact', label: t('contact') },
   ]
