@@ -28,7 +28,7 @@ type Props = {
   onSaved: (content: SiteContent) => void
 }
 
-type AdminTab = 'overview' | 'products' | 'reviews' | 'links' | 'copy'
+type AdminTab = 'overview' | 'products' | 'reviews' | 'links' | 'copy' | 'account'
 
 const languageNames: Record<Language, string> = {
   ar: 'العربية',
@@ -117,6 +117,10 @@ export default function AdminPortal({ siteContent, onSaved }: Props) {
   const [language, setLanguage] = useState<Language>('ar')
   const [copySearch, setCopySearch] = useState('')
   const [saving, setSaving] = useState(false)
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmNewPassword, setConfirmNewPassword] = useState('')
+  const [accountNotice, setAccountNotice] = useState('')
   const [uploadingProduct, setUploadingProduct] = useState<string | null>(null)
   const [newModelCode, setNewModelCode] = useState('')
   const [newModelCategory, setNewModelCategory] = useState<Product['category']>('abaya')
@@ -138,6 +142,9 @@ export default function AdminPortal({ siteContent, onSaved }: Props) {
       .then((body: unknown) => {
         if (active && body !== null && typeof body === 'object' && 'authenticated' in body) {
           setAuthenticated(body.authenticated === true)
+          if (body.authenticated === true && 'username' in body && typeof body.username === 'string') {
+            setUsername(body.username)
+          }
         }
       })
       .catch((requestError: unknown) => {
@@ -418,6 +425,47 @@ export default function AdminPortal({ siteContent, onSaved }: Props) {
     }
   }
 
+  const saveAccountSettings = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setError('')
+    setAccountNotice('')
+    if (newPassword !== confirmNewPassword) {
+      setError('تأكيد كلمة المرور غير مطابق.')
+      return
+    }
+
+    setSaving(true)
+    try {
+      const response = await backendFetch('/api/admin/account', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          currentPassword,
+          username,
+          password: newPassword,
+          confirmPassword: confirmNewPassword,
+        }),
+      })
+      const body = await readJson(response)
+      if (!response.ok) throw new Error(messageFrom(response, body))
+      if (body === null || typeof body !== 'object' ||
+        !('token' in body) || typeof body.token !== 'string' ||
+        !('username' in body) || typeof body.username !== 'string') {
+        throw new Error('استجابة تحديث الحساب غير صالحة.')
+      }
+      setAdminSessionToken(body.token)
+      setUsername(body.username)
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmNewPassword('')
+      setAccountNotice('تم تحديث اسم المستخدم وكلمة المرور بنجاح.')
+    } catch (accountError) {
+      setError(accountError instanceof Error ? accountError.message : 'تعذر تحديث بيانات الحساب.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const login = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     setError('')
@@ -456,6 +504,10 @@ export default function AdminPortal({ siteContent, onSaved }: Props) {
       clearAdminSessionToken()
       setUsername('')
       setPassword('')
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmNewPassword('')
+      setAccountNotice('')
       setTab('overview')
     } catch (logoutError) {
       setError(logoutError instanceof Error ? logoutError.message : 'تعذر تسجيل الخروج.')
@@ -466,6 +518,10 @@ export default function AdminPortal({ siteContent, onSaved }: Props) {
     setIsOpen(false)
     setError('')
     setPassword('')
+    setCurrentPassword('')
+    setNewPassword('')
+    setConfirmNewPassword('')
+    setAccountNotice('')
   }
 
   const openPanel = () => {
@@ -516,6 +572,7 @@ export default function AdminPortal({ siteContent, onSaved }: Props) {
                     ['reviews', 'تقييمات العملاء'],
                     ['links', 'الروابط والعنوان'],
                     ['copy', 'النصوص والترجمات'],
+                    ['account', 'إعدادات الحساب'],
                   ] as const).map(([id, label]) => (
                     <button className={tab === id ? 'is-active' : ''} type="button" key={id} onClick={() => setTab(id)}>
                       <span>{label}</span><ChevronDown size={14} aria-hidden="true" />
@@ -535,16 +592,40 @@ export default function AdminPortal({ siteContent, onSaved }: Props) {
                         {tab === 'overview' ? 'أهلاً بك في لوحة الإدارة' :
                           tab === 'products' ? 'كتالوج الموديلات' :
                             tab === 'reviews' ? 'تقييمات العملاء' :
-                            tab === 'links' ? 'بيانات التواصل والموقع' : 'محتوى الموقع'}
+                            tab === 'links' ? 'بيانات التواصل والموقع' :
+                              tab === 'account' ? 'إعدادات الحساب' : 'محتوى الموقع'}
                       </h1>
                     </div>
-                    <button className="admin-save" type="button" onClick={saveChanges} disabled={saving}>
-                      {saving ? <span className="admin-spinner" /> : <Save size={16} aria-hidden="true" />}
-                      {saving ? 'جارٍ الحفظ…' : 'حفظ التعديلات'}
-                    </button>
+                    {tab !== 'account' && (
+                      <button className="admin-save" type="button" onClick={saveChanges} disabled={saving}>
+                        {saving ? <span className="admin-spinner" /> : <Save size={16} aria-hidden="true" />}
+                        {saving ? 'جارٍ الحفظ…' : 'حفظ التعديلات'}
+                      </button>
+                    )}
                   </div>
 
                   {error && <div className="admin-alert" role="alert">{error}</div>}
+
+                  {tab === 'account' && (
+                    <section className="admin-section-content">
+                      <div className="admin-section-intro">
+                        <div><h2>تغيير بيانات الدخول</h2><p>أدخل كلمة المرور الحالية لتأكيد هويتك. كلمة المرور الجديدة يجب ألا تقل عن 16 حرفًا.</p></div>
+                      </div>
+                      <form className="admin-fields-card" onSubmit={saveAccountSettings}>
+                        <div className="admin-settings-grid">
+                          <label>اسم المستخدم الجديد<input autoComplete="username" value={username} onChange={(event) => setUsername(event.target.value)} minLength={3} maxLength={120} required /></label>
+                          <label>كلمة المرور الحالية<input autoComplete="current-password" type="password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} maxLength={200} required /></label>
+                          <label>كلمة المرور الجديدة<input autoComplete="new-password" type="password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} minLength={16} maxLength={200} required /></label>
+                          <label>تأكيد كلمة المرور الجديدة<input autoComplete="new-password" type="password" value={confirmNewPassword} onChange={(event) => setConfirmNewPassword(event.target.value)} minLength={16} maxLength={200} required /></label>
+                        </div>
+                        {accountNotice && <p className="admin-account-notice" role="status">{accountNotice}</p>}
+                        <button className="admin-save admin-account-submit" type="submit" disabled={saving}>
+                          {saving ? <span className="admin-spinner" /> : <Save size={16} aria-hidden="true" />}
+                          {saving ? 'جارٍ تحديث الحساب…' : 'حفظ بيانات الحساب'}
+                        </button>
+                      </form>
+                    </section>
+                  )}
 
                   {tab === 'overview' && (
                     <div className="admin-overview">

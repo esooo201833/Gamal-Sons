@@ -6,6 +6,7 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 const actions: Record<string, string> = {
   '/api/site': 'site',
   '/api/admin/session': 'session',
+  '/api/admin/account': 'account',
   '/api/admin/content': 'content',
   '/api/admin/upload': 'upload',
 }

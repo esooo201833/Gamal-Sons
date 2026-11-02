@@ -2,6 +2,7 @@ const MAX_IMAGE_SIZE = 3 * 1024 * 1024
 const SESSION_DURATION_SECONDS = 8 * 60 * 60
 const LOGIN_WINDOW_MS = 15 * 60 * 1000
 const MAX_LOGIN_ATTEMPTS = 5
+const PASSWORD_HASH_ITERATIONS = 310_000
 const loginWindows = new Map<string, { attempts: number; expiresAt: number }>()
 
 type JsonRecord = Record<string, unknown>
@@ -87,19 +88,21 @@ async function signSession(payload: string): Promise<Uint8Array> {
   return new Uint8Array(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payload)))
 }
 
-async function createSession(username: string): Promise<string> {
+async function createSession(username: string, credentialVersion: string): Promise<string> {
   const payload = base64UrlEncode(new TextEncoder().encode(JSON.stringify({
     username,
+    credentialVersion,
     expiresAt: Date.now() + SESSION_DURATION_SECONDS * 1000,
   })))
   return `${payload}.${base64UrlEncode(await signSession(payload))}`
 }
 
-async function authenticated(request: Request): Promise<boolean> {
+async function authenticated(request: Request): Promise<string | null> {
   const token = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '')
-  if (!token) return false
+  if (!token) return null
   const [encodedPayload, signature, extra] = token.split('.')
-  if (!encodedPayload || !signature || extra !== undefined) return false
+  if (!encodedPayload || !signature || extra !== undefined) return null
+  let payload: unknown
   try {
     const key = await crypto.subtle.importKey(
       'raw',
@@ -114,15 +117,19 @@ async function authenticated(request: Request): Promise<boolean> {
       toArrayBuffer(base64UrlDecode(signature)),
       new TextEncoder().encode(encodedPayload),
     )
-    if (!valid) return false
-    const payload: unknown = JSON.parse(new TextDecoder().decode(base64UrlDecode(encodedPayload)))
-    return isRecord(payload) &&
-      payload.username === Deno.env.get('ADMIN_USERNAME') &&
-      typeof payload.expiresAt === 'number' &&
-      payload.expiresAt > Date.now()
+    if (!valid) return null
+    payload = JSON.parse(new TextDecoder().decode(base64UrlDecode(encodedPayload)))
   } catch {
-    return false
+    return null
   }
+  if (!isRecord(payload) || typeof payload.username !== 'string' ||
+    typeof payload.credentialVersion !== 'string' ||
+    typeof payload.expiresAt !== 'number' || payload.expiresAt <= Date.now()) return null
+  const credentials = await currentCredentials()
+  const credentialVersion = credentials.stored?.credentialVersion ?? 'legacy'
+  return payload.username === credentials.username && payload.credentialVersion === credentialVersion
+    ? payload.username
+    : null
 }
 
 async function sameSecret(left: string, right: string): Promise<boolean> {
@@ -176,6 +183,97 @@ async function databaseRequest(path: string, init: RequestInit = {}): Promise<Re
   headers.set('apikey', key)
   headers.set('Authorization', `Bearer ${key}`)
   return fetch(`${url}/rest/v1/${path}`, { ...init, headers })
+}
+
+type StoredCredentials = {
+  username: string
+  passwordSalt: string
+  passwordHash: string
+  credentialVersion: string
+}
+
+async function storedCredentials(): Promise<StoredCredentials | null> {
+  const response = await databaseRequest(
+    'admin_credentials?singleton=eq.true&select=username,password_salt,password_hash,credential_version',
+  )
+  if (!response.ok) throw new Error(`Supabase admin credentials read failed (${response.status}).`)
+  const rows: unknown = await response.json()
+  if (!Array.isArray(rows) || rows.length === 0) return null
+  const row: unknown = rows[0]
+  if (!isRecord(row) || typeof row.username !== 'string' ||
+    typeof row.password_salt !== 'string' || typeof row.password_hash !== 'string' ||
+    typeof row.credential_version !== 'string') {
+    throw new Error('Stored admin credentials are invalid.')
+  }
+  return {
+    username: row.username,
+    passwordSalt: row.password_salt,
+    passwordHash: row.password_hash,
+    credentialVersion: row.credential_version,
+  }
+}
+
+async function currentCredentials(): Promise<{ username: string; stored: StoredCredentials | null }> {
+  const stored = await storedCredentials()
+  if (stored) return { username: stored.username, stored }
+  const username = Deno.env.get('ADMIN_USERNAME')
+  const password = Deno.env.get('ADMIN_PASSWORD')
+  if (!username || !password || password.length < 16) {
+    throw new Error('Admin credentials are not configured correctly.')
+  }
+  return { username, stored: null }
+}
+
+async function hashPassword(password: string, salt: Uint8Array): Promise<Uint8Array> {
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(password),
+    'PBKDF2',
+    false,
+    ['deriveBits'],
+  )
+  const bits = await crypto.subtle.deriveBits({
+    name: 'PBKDF2',
+    hash: 'SHA-256',
+    salt: toArrayBuffer(salt),
+    iterations: PASSWORD_HASH_ITERATIONS,
+  }, key, 256)
+  return new Uint8Array(bits)
+}
+
+async function validPassword(password: string, credentials: Awaited<ReturnType<typeof currentCredentials>>): Promise<boolean> {
+  if (!credentials.stored) {
+    const configuredPassword = Deno.env.get('ADMIN_PASSWORD')
+    return configuredPassword !== undefined && await sameSecret(password, configuredPassword)
+  }
+  const actual = await hashPassword(password, base64UrlDecode(credentials.stored.passwordSalt))
+  return await sameSecret(base64UrlEncode(actual), credentials.stored.passwordHash)
+}
+
+async function updateCredentials(username: string, password: string): Promise<string> {
+  const salt = crypto.getRandomValues(new Uint8Array(16))
+  const passwordHash = await hashPassword(password, salt)
+  const credentialVersion = crypto.randomUUID()
+  const response = await databaseRequest('admin_credentials?on_conflict=singleton', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Prefer: 'resolution=merge-duplicates,return=minimal',
+    },
+    body: JSON.stringify({
+      singleton: true,
+      username,
+      password_salt: base64UrlEncode(salt),
+      password_hash: base64UrlEncode(passwordHash),
+      credential_version: credentialVersion,
+      updated_at: new Date().toISOString(),
+    }),
+  })
+  if (!response.ok) {
+    console.error('Supabase admin credentials save failed:', response.status, await response.text())
+    throw new Error('Supabase admin credentials save failed.')
+  }
+  return credentialVersion
 }
 
 function isSafeImageUrl(value: string): boolean {
@@ -328,7 +426,8 @@ async function handleSite(origin: string | null): Promise<Response> {
 
 async function handleSession(request: Request, origin: string | null): Promise<Response> {
   if (request.method === 'GET') {
-    return jsonResponse({ authenticated: await authenticated(request) }, 200, origin)
+    const username = await authenticated(request)
+    return jsonResponse({ authenticated: username !== null, ...(username ? { username } : {}) }, 200, origin)
   }
   if (request.method === 'DELETE') {
     return jsonResponse({ authenticated: false }, 200, origin)
@@ -346,20 +445,56 @@ async function handleSession(request: Request, origin: string | null): Promise<R
   } catch {
     throw new RequestError(400, 'بيانات تسجيل الدخول غير صالحة.')
   }
-  const username = Deno.env.get('ADMIN_USERNAME')
-  const password = Deno.env.get('ADMIN_PASSWORD')
-  if (!username || !password || password.length < 16) {
-    throw new Error('Admin credentials are not configured correctly.')
-  }
+  const credentials = await currentCredentials()
   const valid = isRecord(body) && typeof body.username === 'string' &&
     typeof body.password === 'string' && body.username.length <= 120 && body.password.length <= 200 &&
-    await sameSecret(body.username, username) && await sameSecret(body.password, password)
+    await sameSecret(body.username, credentials.username) &&
+    await validPassword(body.password, credentials)
   if (!valid) {
     recordFailedLogin(address)
     return jsonResponse({ message: 'اسم الدخول أو كلمة المرور غير صحيحة.' }, 401, origin)
   }
   loginWindows.delete(address)
-  return jsonResponse({ authenticated: true, token: await createSession(username) }, 200, origin)
+  return jsonResponse({
+    authenticated: true,
+    token: await createSession(credentials.username, credentials.stored?.credentialVersion ?? 'legacy'),
+  }, 200, origin)
+}
+
+async function handleAccount(request: Request, origin: string | null): Promise<Response> {
+  if (request.method !== 'PUT') throw new RequestError(405, 'الطريقة غير مدعومة.')
+  const sessionUsername = await authenticated(request)
+  if (!sessionUsername) throw new RequestError(401, 'انتهت جلسة الإدارة. سجّل الدخول مرة أخرى.')
+  let body: unknown
+  try {
+    body = await request.json()
+  } catch {
+    throw new RequestError(400, 'بيانات الحساب غير صالحة.')
+  }
+  if (!isRecord(body) || typeof body.currentPassword !== 'string' ||
+    typeof body.username !== 'string' || typeof body.password !== 'string' ||
+    typeof body.confirmPassword !== 'string' || body.currentPassword.length > 200) {
+    throw new RequestError(400, 'أكمل جميع بيانات الحساب.')
+  }
+  const username = body.username.trim()
+  if (username.length < 3 || username.length > 120 || username !== body.username) {
+    throw new RequestError(400, 'اسم المستخدم يجب أن يكون من 3 إلى 120 حرفًا وبدون مسافات في البداية أو النهاية.')
+  }
+  if (body.password.length < 16 || body.password.length > 200) {
+    throw new RequestError(400, 'كلمة المرور الجديدة يجب أن تكون من 16 إلى 200 حرف.')
+  }
+  if (body.password !== body.confirmPassword) {
+    throw new RequestError(400, 'تأكيد كلمة المرور غير مطابق.')
+  }
+  const credentials = await currentCredentials()
+  if (credentials.username !== sessionUsername || !await validPassword(body.currentPassword, credentials)) {
+    throw new RequestError(401, 'كلمة المرور الحالية غير صحيحة.')
+  }
+  const credentialVersion = await updateCredentials(username, body.password)
+  return jsonResponse({
+    username,
+    token: await createSession(username, credentialVersion),
+  }, 200, origin)
 }
 
 async function handleUpload(request: Request, origin: string | null): Promise<Response> {
@@ -433,6 +568,7 @@ Deno.serve(async (request) => {
     const action = new URL(request.url).searchParams.get('action')
     if (action === 'site' && request.method === 'GET') return await handleSite(origin)
     if (action === 'session') return await handleSession(request, origin)
+    if (action === 'account') return await handleAccount(request, origin)
     if (action === 'upload') return await handleUpload(request, origin)
     if (action === 'content') return await handleContent(request, origin)
     throw new RequestError(404, 'المسار غير موجود.')

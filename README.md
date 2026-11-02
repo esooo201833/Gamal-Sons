@@ -34,7 +34,8 @@ Vercel hosts only the static Vite website. Supabase provides the site-content da
 4. Set the following **Vite build-time** variables in the Vercel project for Production and any Preview branches you use, then redeploy:
    - `VITE_SUPABASE_URL`: the Supabase project URL.
    - `VITE_SUPABASE_ANON_KEY`: the Supabase publishable/anon key. This public key is safe to include in the site; the database has no anonymous write policy.
-5. Open **دخول الإدارة** at the bottom of the site. Product images go to the public `site-assets` bucket, and saved content goes to the `site_content` table.
+5. Apply the migrations before deploying the Edge Function. Open **دخول الإدارة** at the bottom of the site. Product images go to the public `site-assets` bucket, and saved content goes to the `site_content` table.
+6. To change the admin username and password later, sign in and open **إعدادات الحساب**. The update requires the current password and a new password of at least 16 characters. The new password is stored as a salted PBKDF2 hash in the private `admin_credentials` table, and other active sessions are invalidated; the initial login continues to use the `ADMIN_USERNAME` and `ADMIN_PASSWORD` secrets until the first successful account change.
 
 The migration creates a public image bucket and a private-to-the-Edge-Function content table. Product images are public because visitors and WhatsApp need to load them. Admin sessions last eight hours and are kept in the current browser tab.
 
