@@ -187,6 +187,16 @@ function isSafeImageUrl(value: string): boolean {
   }
 }
 
+function isSafeSiteUrl(value: string): boolean {
+  if (value.startsWith('/assets/') && !value.startsWith('//')) return true
+  try {
+    const url = new URL(value)
+    return url.protocol === 'https:' || url.protocol === 'http:'
+  } catch {
+    return false
+  }
+}
+
 function isFacebookVideoUrl(value: string): boolean {
   if (!value || value.length > 2000 || value !== value.trim()) return false
   try {
@@ -213,13 +223,8 @@ function validateContent(value: unknown): JsonRecord {
     if (typeof field !== 'string' || field.length > 2000) {
       throw new RequestError(400, `قيمة إعداد الموقع "${key}" غير صالحة.`)
     }
-    if (key.endsWith('Url')) {
-      try {
-        const url = new URL(field)
-        if (url.protocol !== 'https:' && url.protocol !== 'http:') throw new Error()
-      } catch {
-        throw new RequestError(400, `الرابط "${key}" يجب أن يبدأ بـ https:// أو http://.`)
-      }
+    if (key.endsWith('Url') && !isSafeSiteUrl(field)) {
+      throw new RequestError(400, `الرابط "${key}" يجب أن يبدأ بـ https:// أو http://.`)
     }
   }
 
