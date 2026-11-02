@@ -20,6 +20,7 @@ import {
   type ProductSubcategory,
 } from '../data/products'
 import { isFacebookVideoUrl, type SiteContent, type SiteSettings, type TranslationKey } from '../data/site-content'
+import { backendFetch, clearAdminSessionToken, setAdminSessionToken } from '../lib/backend'
 import '../Admin.css'
 
 type Props = {
@@ -128,7 +129,7 @@ export default function AdminPortal({ siteContent, onSaved }: Props) {
   useEffect(() => {
     if (!isOpen) return
     let active = true
-    fetch('/api/admin/session', { credentials: 'same-origin' })
+    backendFetch('/api/admin/session')
       .then(async (response) => {
         const body = await readJson(response)
         if (!response.ok) throw new Error(messageFrom(response, body))
@@ -278,9 +279,8 @@ export default function AdminPortal({ siteContent, onSaved }: Props) {
 
     const dimensions = await getImageDimensions(file)
     const image = await getImageDataUrl(file)
-    const response = await fetch('/api/admin/upload', {
+    const response = await backendFetch('/api/admin/upload', {
       method: 'POST',
-      credentials: 'same-origin',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ image }),
     })
@@ -401,9 +401,8 @@ export default function AdminPortal({ siteContent, onSaved }: Props) {
     setSaving(true)
     setError('')
     try {
-      const response = await fetch('/api/admin/content', {
+      const response = await backendFetch('/api/admin/content', {
         method: 'PUT',
-        credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(draft),
       })
@@ -424,14 +423,17 @@ export default function AdminPortal({ siteContent, onSaved }: Props) {
     setError('')
     setCheckingSession(true)
     try {
-      const response = await fetch('/api/admin/session', {
+      const response = await backendFetch('/api/admin/session', {
         method: 'POST',
-        credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
       })
       const body = await readJson(response)
       if (!response.ok) throw new Error(messageFrom(response, body))
+      if (body === null || typeof body !== 'object' || !('token' in body) || typeof body.token !== 'string') {
+        throw new Error('استجابة تسجيل الدخول غير صالحة.')
+      }
+      setAdminSessionToken(body.token)
       setDraft(structuredClone(siteContent))
       setPassword('')
       setAuthenticated(true)
@@ -445,13 +447,13 @@ export default function AdminPortal({ siteContent, onSaved }: Props) {
   const logout = async () => {
     setError('')
     try {
-      const response = await fetch('/api/admin/session', {
+      const response = await backendFetch('/api/admin/session', {
         method: 'DELETE',
-        credentials: 'same-origin',
       })
       const body = await readJson(response)
       if (!response.ok) throw new Error(messageFrom(response, body))
       setAuthenticated(false)
+      clearAdminSessionToken()
       setUsername('')
       setPassword('')
       setTab('overview')

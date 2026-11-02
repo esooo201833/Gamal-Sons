@@ -22,6 +22,7 @@ import {
 } from './data/products'
 import { defaultSiteContent, type SiteContent } from './data/site-content'
 import { translations as staticTranslations, type Language } from './i18n/translations'
+import { backendFetch } from './lib/backend'
 import AdminPortal from './components/AdminPortal'
 import './App.css'
 
@@ -166,13 +167,13 @@ function App() {
 
   useEffect(() => {
     let active = true
-    fetch('/api/site')
+    backendFetch('/api/site')
       .then(async (response) => {
         if (!response.ok) throw new Error(`تعذر تحميل محتوى الموقع (${response.status}).`)
-        return response.json() as Promise<SiteContent>
+        return response.json() as Promise<SiteContent | null>
       })
       .then((content) => {
-        if (!active) return
+        if (!active || !content) return
         setSiteContent(content)
       })
       .catch((error: unknown) => {

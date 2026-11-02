@@ -1,24 +1,53 @@
 # Awlad Gamal website
 
-## Deploy on Vercel
+## Hosting and backend
 
-The site uses Vercel Functions for its admin API and Vercel Blob for shared content and product images. A static Vite preview does not provide persistent editing.
+Vercel hosts only the static Vite website. Supabase provides the site-content database, public product-image storage, and the admin API through an Edge Function. No Vercel Functions or Blob access are needed.
 
-1. In the Vercel project `gamal`, create a **public Blob store** and connect it to all deployment environments. Product photos and the public site content are intentionally readable by visitors.
-2. Add these environment variables in **Project Settings → Environment Variables** for Production, Preview, and Development:
+### Supabase setup
+
+1. Create a Supabase project and install the Supabase CLI.
+2. Link this repository to the project, apply the database migration, and deploy the Edge Function:
+
+   ```sh
+   supabase login
+   supabase link --project-ref YOUR_PROJECT_REF
+   supabase db push
+   supabase functions deploy admin-api
+   ```
+
+   The function disables Supabase JWT verification because it authenticates the admin with its own short-lived signed session. Database and Storage access remain server-side using the Supabase service-role key.
+3. Configure these Edge Function secrets in Supabase:
    - `ADMIN_USERNAME`: the admin login name.
-   - `ADMIN_PASSWORD`: a unique password with at least 16 characters. Do not reuse a password or put it in source control.
-   - `ADMIN_SESSION_SECRET`: a random secret with at least 32 characters. Generate one locally with `node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'))"`.
-   - `BLOB_READ_WRITE_TOKEN`: added automatically when the Blob store is connected to this project.
-3. Redeploy after creating the store and setting the variables.
-4. Open **دخول الإدارة** at the bottom of the site. Edits are saved to Blob and shared with all visitors.
+   - `ADMIN_PASSWORD`: a unique password of at least 16 characters.
+   - `ADMIN_SESSION_SECRET`: a random secret of at least 32 characters.
+   - `ALLOWED_ORIGINS`: comma-separated exact origins allowed to call the function, such as the production Vercel URL and `http://localhost:5173`. Add the custom domain and any preview origins you use.
+   - `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are provided by the Supabase Edge Function runtime. Never expose the service-role key in the browser or Vercel.
 
-The public site uses separate routes for `/`, `/about`, `/catalog`, `/latest`, `/reviews`, and `/contact`. Each catalog category has its own `/catalog/:categoryId` route; Vercel rewrites these routes to the Vite app so direct links and refreshes continue to work.
+   On Windows PowerShell, copy `.env.supabase.example` to `.env.supabase`, replace its example credentials, generate a session secret with `node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'))"`, then run:
 
-The login API rejects passwords shorter than 16 characters. Admin sessions use an HttpOnly, SameSite cookie and expire after eight hours. Do not send admin passwords or storage tokens in chat or commit them to the repository.
+   ```sh
+   supabase secrets set --env-file .env.supabase
+   ```
+
+   `.env.supabase` is git-ignored. Keep it private and do not send its values in chat.
+4. Set the following **Vite build-time** variables in the Vercel project for Production and any Preview branches you use, then redeploy:
+   - `VITE_SUPABASE_URL`: the Supabase project URL.
+   - `VITE_SUPABASE_ANON_KEY`: the Supabase publishable/anon key. This public key is safe to include in the site; the database has no anonymous write policy.
+5. Open **دخول الإدارة** at the bottom of the site. Product images go to the public `site-assets` bucket, and saved content goes to the `site_content` table.
+
+The migration creates a public image bucket and a private-to-the-Edge-Function content table. Product images are public because visitors and WhatsApp need to load them. Admin sessions last eight hours and are kept in the current browser tab.
+
+The existing Vercel Blob store exceeded its Hobby advanced-operation allowance and is currently suspended. Its saved content cannot be fetched while suspended. Existing local/default catalog content remains available; recover any admin-only edits and old image files from Blob after access returns, before treating the Supabase project as a complete data migration.
+
+After confirming the Supabase-backed site and admin work, remove the old `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `ADMIN_SESSION_SECRET`, and `BLOB_READ_WRITE_TOKEN` variables from Vercel. Do not remove the Blob store until any needed content and images have been recovered.
+
+### Routes
+
+The public site uses separate routes for `/`, `/about`, `/catalog`, `/latest`, `/reviews`, and `/contact`. Each catalog category has its own `/catalog/:categoryId` route; `vercel.json` rewrites these paths to the static Vite app.
 
 ## Development
 
-- `npm run dev:vercel` starts the Vercel development server, including the admin API routes. Use the linked Vercel project's environment variables to log in and save changes locally.
-- `npm run dev` starts Vite only and does not provide API routes.
-- `npm run build` type-checks the frontend and Vercel API functions, then builds the site.
+- Copy `.env.example` to `.env.local` and add the public Supabase URL and publishable/anon key.
+- Run `npm run dev` to start Vite. Add `http://localhost:5173` to the Supabase function's `ALLOWED_ORIGINS` secret to use the admin API locally.
+- `npm run build` type-checks the frontend and Supabase Edge Function, then builds the static site.
