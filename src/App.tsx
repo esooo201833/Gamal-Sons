@@ -64,34 +64,6 @@ const getInitialLanguage = (): Language => {
   }
 }
 
-function AbayaRunner({ variant }: { variant: 1 | 2 | 3 }) {
-  return (
-    <svg className={`abaya-runner abaya-runner-${variant}`} viewBox="0 0 100 170" aria-hidden="true">
-      <g className="abaya-runner-arm abaya-runner-arm-left">
-        <path d="M29 56 Q21 56 18 65 L7 85 Q7 91 14 93 L31 71" fill="#24221e" />
-        <path d="M8 87 Q4 94 9 97 Q14 97 16 91" fill="#c99d78" />
-      </g>
-      <g className="abaya-runner-arm abaya-runner-arm-right">
-        <path d="M71 56 Q79 56 82 65 L93 85 Q93 91 86 93 L69 71" fill="#24221e" />
-        <path d="M92 87 Q96 94 91 97 Q86 97 84 91" fill="#c99d78" />
-      </g>
-      <g className="abaya-runner-leg abaya-runner-leg-left">
-        <path d="M40 132 L39 155 L34 163 L43 165 L50 158 L50 133" fill="#26231f" />
-        <path d="M34 160 Q29 165 32 168 L46 168 Q49 166 43 162" fill="#8b6944" />
-      </g>
-      <g className="abaya-runner-leg abaya-runner-leg-right">
-        <path d="M60 132 L61 155 L66 163 L57 165 L50 158 L50 133" fill="#26231f" />
-        <path d="M66 160 Q71 165 68 168 L54 168 Q51 166 57 162" fill="#8b6944" />
-      </g>
-      <path d="M38 44 Q50 37 62 44 L73 53 Q79 58 80 68 L91 137 Q50 150 9 137 L20 68 Q21 58 27 53 Z" fill="#302b24" />
-      <path d="M38 44 Q50 37 62 44 L69 54 Q62 63 50 64 Q38 63 31 54 Z" fill="#3c352b" />
-      <path d="M36 19 Q37 5 50 5 Q63 5 64 19 L69 34 Q66 47 50 50 Q34 47 31 34 Z" fill="#28251f" />
-      <path d="M43 25 Q50 20 57 25 L58 34 Q56 40 50 41 Q44 40 42 34 Z" fill="#c99d78" />
-      <path d="M9 137 Q50 149 91 137" fill="none" stroke="#c9a35f" strokeOpacity=".7" strokeWidth="2" />
-    </svg>
-  )
-}
-
 function App() {
   const [siteContent, setSiteContent] = useState<SiteContent>(defaultSiteContent)
   const [language, setLanguage] = useState<Language>(getInitialLanguage)
@@ -379,16 +351,8 @@ function App() {
 
       <main id="main">
         {route.page === 'home' && <section className="hero-section" id="home">
-          <div className="abaya-runners" aria-hidden="true">
-            {([1, 2, 3] as const).map((variant) => <AbayaRunner key={variant} variant={variant} />)}
-          </div>
           <div className="hero-inner page-width home-brand-inner">
-            <motion.div
-              className="hero-copy"
-              initial={shouldReduceMotion ? false : { opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.65, ease: 'easeOut', delay: 0.08 }}
-            >
+            <div className="hero-copy">
               <p className="eyebrow"><span className="eyebrow-mark" />{t('heroEyebrow')}</p>
               <h1>{t('heroTitle')}</h1>
               <p className="hero-description">{t('heroDescription')}</p>
@@ -397,12 +361,12 @@ function App() {
                 <a className="button button-outline" href="/about">{t('about')} <ArrowUpRight size={16} aria-hidden="true" /></a>
               </div>
               <p className="hero-note"><span />{t('heroNote')}</p>
-            </motion.div>
-            <motion.div className="home-brand-mark" {...revealProps}>
+            </div>
+            <div className="home-brand-mark">
               <img src={site.brandLogoUrl} alt={t('logoAlt')} />
               <span>{site.brandNameArabic}</span>
               <small>{t('heroFounded')} · {t('heroLocation')}</small>
-            </motion.div>
+            </div>
           </div>
           <div className="hero-bottom page-width"><span>{t('heroNote')}</span><span>{t('heroFounded')}</span><span>{t('heroLocation')}</span></div>
         </section>}

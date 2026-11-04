@@ -37,14 +37,6 @@
 .hero-section { position: relative; isolation: isolate; overflow: hidden; color: var(--black); background: radial-gradient(ellipse at 86% 16%, rgb(255 255 255 / 72%), transparent 34%), linear-gradient(118deg, #f3eee4 0%, #e8dfd0 54%, #eee8dd 100%); }
 .hero-section::before { position: absolute; z-index: -1; inset: 0; background-image: linear-gradient(90deg, transparent 49.9%, rgb(127 99 53 / 5%) 50%, transparent 50.1%), linear-gradient(0deg, transparent 49.9%, rgb(127 99 53 / 4%) 50%, transparent 50.1%); background-size: 72px 72px; mask-image: linear-gradient(90deg, transparent, #000 65%); content: ''; pointer-events: none; }
 .hero-section::after { position: absolute; inset-inline: 0; inset-block-start: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--gold), transparent); content: ''; }
-.abaya-runners { position: absolute; z-index: 0; inset: 0; overflow: hidden; pointer-events: none; }
-.abaya-runner { position: absolute; left: 100%; inset-block-end: 30%; width: clamp(54px, 7vw, 86px); height: auto; overflow: visible; opacity: .32; filter: drop-shadow(0 5px 5px rgb(40 31 16 / 14%)); animation: abaya-cross 18s linear infinite; }
-.abaya-runner-2 { inset-block-end: 34%; width: clamp(48px, 5.5vw, 70px); opacity: .24; animation-duration: 22s; animation-delay: -8s; }
-.abaya-runner-3 { inset-block-end: 30%; width: clamp(42px, 4.5vw, 58px); opacity: .2; animation-duration: 20s; animation-delay: -14s; }
-.abaya-runner-arm, .abaya-runner-leg { transform-box: fill-box; }
-.abaya-runner-arm { transform-origin: 50% 12%; animation: abaya-arm-run .34s ease-in-out infinite alternate; }
-.abaya-runner-arm-right, .abaya-runner-leg-right { animation-direction: alternate-reverse; }
-.abaya-runner-leg { transform-origin: 50% 8%; animation: abaya-leg-run .34s ease-in-out infinite alternate; }
 .hero-inner { position: relative; z-index: 1; min-height: 620px; padding-block: 66px 70px; display: grid; grid-template-columns: 1.04fr .96fr; align-items: center; gap: 56px; }
 .home-brand-inner { min-height: 570px; }
 .home-brand-mark { width: min(100%, 390px); aspect-ratio: 1; justify-self: center; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px solid rgb(201 163 95 / 42%); border-radius: 50%; background: radial-gradient(circle, rgb(255 255 255 / 84%), rgb(239 231 216 / 45%) 67%, transparent 68%); box-shadow: 0 0 0 12px rgb(201 163 95 / 5%), 0 20px 55px rgb(40 31 16 / 9%); }
@@ -246,7 +238,6 @@
 .footer-bottom { min-height: 52px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgb(201 163 95 / 22%); color: #aaa194; font-size: 9px; }
 .toast { position: fixed; z-index: 30; inset-inline-start: 24px; inset-block-end: 24px; max-width: min(380px, calc(100vw - 32px)); padding: 13px 17px; color: var(--white); background: var(--dark-surface); border-inline-start: 3px solid var(--gold); box-shadow: 0 10px 35px rgb(0 0 0 / 18%); font-size: 12px; animation: toast-in .2s ease-out; }
 @keyframes toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes hero-content-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes frame-glow { from { border-color: rgb(234 215 173 / 18%); } to { border-color: rgb(234 215 173 / 42%); } }
 @keyframes orbit-breathe { 0%, 100% { opacity: .48; scale: .98; } 50% { opacity: .9; scale: 1.025; } }
 .drawer-layer { position: fixed; z-index: 50; inset: 0; display: flex; justify-content: flex-end; }
@@ -279,9 +270,6 @@
 .drawer-footer { padding-block-start: 13px; border-top: 1px solid var(--border); }
 .drawer-send { width: 100%; }
 .drawer-send:disabled { opacity: .55; cursor: not-allowed; }
-@keyframes abaya-cross { from { left: 100%; transform: translateX(0); } to { left: 0; transform: translateX(-120%); } }
-@keyframes abaya-arm-run { from { transform: rotate(-24deg); } to { transform: rotate(24deg); } }
-@keyframes abaya-leg-run { from { transform: rotate(-19deg); } to { transform: rotate(19deg); } }
 @keyframes drawer-in { from { transform: translateX(18px); opacity: .5; } to { transform: translateX(0); opacity: 1; } }
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
 [dir='rtl'] h1, [dir='rtl'] h2, [dir='rtl'] h3 { font-family: var(--arabic-font); }
@@ -369,9 +357,6 @@
   .hero-slide-arrow { width: 26px; height: 26px; }
   .hero-bottom { min-height: 48px; gap: 8px; font-size: 8px; letter-spacing: 0; }
   .hero-bottom span { text-align: center; }
-  .abaya-runner { opacity: .2; }
-  .abaya-runner-2 { opacity: .16; }
-  .abaya-runner-3 { opacity: .14; }
   .collection-intro { padding-block: 58px; }
   .collection-intro-inner { display: block; }
   .collection-intro :is(h1, h2), .catalog-heading :is(h1, h2), .section-heading h2, .contact-heading :is(h1, h2) { font-size: 36px; }
