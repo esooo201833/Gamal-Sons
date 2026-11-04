@@ -71,13 +71,26 @@
 .admin-count { padding: 6px 9px; border: 1px solid rgb(201 163 95 / 20%); color: var(--gold-light); background: rgb(201 163 95 / 7%); font-size: 10px; white-space: nowrap; }
 .admin-category-manager { display: grid; gap: 11px; }
 .admin-category-manager > h3, .admin-new-category h4 { margin: 0; color: #eee8dd; font-size: 12px; }
-.admin-category-card, .admin-new-category { padding: 14px; display: grid; gap: 12px; border: 1px solid rgb(255 255 255 / 10%); background: #211f1b; }
-.admin-category-heading, .admin-subcategory-row, .admin-add-subcategory { display: grid; grid-template-columns: minmax(0, 1fr) 34px; align-items: end; gap: 10px; }
-.admin-localized-fields { min-width: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; }
-.admin-localized-fields label { min-width: 0; display: grid; gap: 5px; color: #aaa297; font-size: 9px; }
-.admin-localized-fields input { width: 100%; min-width: 0; min-height: 36px; padding: 7px 9px; border: 1px solid rgb(255 255 255 / 14%); color: #f5f0e6; background: #211f1b; font-size: 10px; }
+.admin-category-card, .admin-new-category { display: grid; gap: 9px; border: 1px solid rgb(255 255 255 / 10%); background: #211f1b; }
+.admin-category-card { padding: 0; overflow: hidden; }
+.admin-category-summary { min-height: 44px; padding: 7px 11px; display: flex; align-items: center; justify-content: space-between; gap: 10px; color: #eee8dd; background: #25221d; cursor: pointer; list-style: none; }
+.admin-category-summary::-webkit-details-marker { display: none; }
+.admin-category-summary-copy { min-width: 0; display: grid; gap: 2px; }
+.admin-category-summary-copy strong { overflow: hidden; font-size: 11px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.admin-category-summary-copy code { color: #938c80; font-size: 9px; }
+.admin-category-summary-meta { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 7px; color: #bdb4a6; font-size: 9px; }
+.admin-category-summary-meta svg { color: var(--gold); transition: transform .18s ease; }
+.admin-category-card[open] > .admin-category-summary { border-bottom: 1px solid rgb(255 255 255 / 8%); }
+.admin-category-card[open] > .admin-category-summary .admin-category-summary-meta svg { transform: rotate(180deg); }
+.admin-category-body { padding: 10px 11px; display: grid; gap: 9px; }
+.admin-new-category { padding: 11px; gap: 8px; }
+.admin-category-heading, .admin-subcategory-row, .admin-add-subcategory { display: grid; grid-template-columns: minmax(0, 1fr) 32px; align-items: end; gap: 8px; }
+.admin-category-heading { align-items: center; }
+.admin-localized-fields { min-width: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
+.admin-localized-fields label { min-width: 0; display: grid; gap: 4px; color: #aaa297; font-size: 8px; }
+.admin-localized-fields input { width: 100%; min-width: 0; min-height: 32px; padding: 5px 8px; border: 1px solid rgb(255 255 255 / 14%); color: #f5f0e6; background: #211f1b; font-size: 9px; }
 .admin-localized-fields input:focus { outline: none; border-color: var(--gold); }
-.admin-subcategory-list { display: grid; gap: 8px; padding-inline-start: 14px; border-inline-start: 2px solid rgb(201 163 95 / 24%); }
+.admin-subcategory-list { display: grid; gap: 7px; padding-inline-start: 10px; border-inline-start: 2px solid rgb(201 163 95 / 24%); }
 .admin-add-subcategory .admin-add-product { grid-column: 1 / -1; justify-self: start; }
 .admin-new-category .admin-add-product { justify-self: start; }
 .admin-new-product, .admin-fields-card { padding: 16px; border: 1px solid rgb(255 255 255 / 10%); background: #211f1b; }
@@ -107,11 +120,11 @@
 .admin-review-video-row .admin-new-icon { width: 32px; height: 32px; }
 .admin-review-video-row a { overflow: hidden; color: var(--gold-light); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
 .admin-new-product-fields > label { gap: 6px; font-size: 10px; }
-.admin-new-product-fields input, .admin-new-product-fields select, .admin-product-fields input, .admin-product-fields select { min-height: 38px; padding: 8px 10px; font-size: 11px; }
+.admin-new-product-fields input, .admin-new-product-fields select, .admin-product-fields input, .admin-product-fields select { min-height: 34px; padding: 6px 8px; font-size: 10px; }
 .admin-file-input { min-height: 38px; padding: 0 10px; display: flex !important; align-items: center; justify-content: center; gap: 7px !important; overflow: hidden; border: 1px solid rgb(255 255 255 / 14%); color: #dbd1c1 !important; background: #25231f; white-space: nowrap; text-overflow: ellipsis; cursor: pointer; }
 .admin-file-input input, .admin-photo-replace input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); }
 .admin-file-input svg { flex: 0 0 auto; color: var(--gold); }
-.admin-add-product { min-height: 38px; padding-inline: 11px; display: inline-flex; align-items: center; justify-content: center; gap: 5px; border: 1px solid var(--gold); color: #171511; background: var(--gold); font-size: 10px; cursor: pointer; }
+.admin-add-product { min-height: 32px; padding-inline: 9px; display: inline-flex; align-items: center; justify-content: center; gap: 5px; border: 1px solid var(--gold); color: #171511; background: var(--gold); font-size: 9px; cursor: pointer; }
 .admin-product-list { display: grid; gap: 8px; }
 .admin-product-row { min-height: 83px; padding: 9px; display: grid; grid-template-columns: 51px minmax(200px, 1fr) minmax(95px, auto) 34px; align-items: center; gap: 12px; border: 1px solid rgb(255 255 255 / 8%); background: #211f1b; }
 .admin-product-photo { position: relative; width: 50px; height: 64px; }
@@ -174,8 +187,11 @@
   .admin-stat-grid article { min-height: 100px; padding: 10px 8px; }
   .admin-stat-grid article > span { font-size: 9px; }
   .admin-stat-grid small { line-height: 1.5; }
-  .admin-category-card, .admin-new-category { padding: 10px; }
-  .admin-localized-fields { grid-template-columns: 1fr; }
+  .admin-category-summary { min-height: 42px; padding-inline: 9px; }
+  .admin-category-body { padding: 9px; }
+  .admin-new-category { padding: 9px; }
+  .admin-localized-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  .admin-localized-fields label:last-child { grid-column: 1 / -1; }
   .admin-category-heading, .admin-subcategory-row { grid-template-columns: minmax(0, 1fr) 30px; gap: 6px; }
   .admin-subcategory-list { padding-inline-start: 8px; }
   .admin-add-subcategory { grid-template-columns: 1fr; }

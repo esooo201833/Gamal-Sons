@@ -6,7 +6,6 @@ import {
   Globe2,
   MapPin,
   Menu,
-  MessageCircle,
   Minus,
   Plus,
   Star,
@@ -74,7 +73,6 @@ function App() {
   const [notice, setNotice] = useState('')
   const [currentPath, setCurrentPath] = useState(() => window.location.pathname)
   const [activeSubcategory, setActiveSubcategory] = useState<ProductSubcategory | 'all'>('all')
-  const [sharingImages, setSharingImages] = useState(false)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
   const returnFocusRef = useRef<HTMLElement | null>(null)
   const shouldReduceMotion = useReducedMotion()
@@ -280,48 +278,13 @@ function App() {
   }
 
   const productWhatsAppHref = (product: (typeof products)[number], index: number) => {
-    const imageUrl = new URL(product.image, window.location.origin).toString()
+    const imageUrl = absoluteProductImageUrl(product)
     const message = `${t('productWhatsAppMessage', { name: productInquiryLabel(product, index) })}\n${imageUrl}`
     return `${site.whatsappUrl}?text=${encodeURIComponent(message)}`
   }
 
   const absoluteProductImageUrl = (product: Product) =>
     new URL(product.image, window.location.origin).toString()
-
-  const shareProductImages = async (items: Product[], message: string, fallbackHref: string) => {
-    const fallbackToWhatsApp = () => window.location.assign(fallbackHref)
-    if (!navigator.share || !navigator.canShare || items.length > 10) {
-      fallbackToWhatsApp()
-      return
-    }
-
-    setSharingImages(true)
-    try {
-      const files = await Promise.all(items.map(async (product) => {
-        const response = await fetch(absoluteProductImageUrl(product))
-        if (!response.ok) throw new Error(`تعذر تحميل صورة الموديل ${product.modelCode ?? product.id}.`)
-        const blob = await response.blob()
-        return new File([blob], `${product.id}.${blob.type.split('/')[1] || 'jpg'}`, { type: blob.type })
-      }))
-      if (!navigator.canShare({ files })) {
-        fallbackToWhatsApp()
-        return
-      }
-      await navigator.share({ files, text: message, title: t('inquiryCart') })
-    } catch (error) {
-      if (error instanceof DOMException && error.name === 'AbortError') return
-      console.error('Unable to share product images:', error)
-      fallbackToWhatsApp()
-    } finally {
-      setSharingImages(false)
-    }
-  }
-
-  const shareProductInquiry = (product: Product, index: number) => {
-    const imageUrl = absoluteProductImageUrl(product)
-    const message = `${t('productWhatsAppMessage', { name: productInquiryLabel(product, index) })}\n${imageUrl}`
-    void shareProductImages([product], message, productWhatsAppHref(product, index))
-  }
 
   const handleDialogKeyDown = (event: KeyboardEvent<HTMLElement>) => {
     if (event.key === 'Escape') setDrawerOpen(false)
@@ -364,7 +327,7 @@ function App() {
             }>{link.label}</a>)}
             <LanguageSelector language={language} onChange={changeLanguage} />
             <a className="mobile-contact-link" href={site.whatsappUrl} target="_blank" rel="noreferrer" aria-label={t('navWhatsApp')}>
-              <MessageCircle size={16} aria-hidden="true" /> {t('navWhatsApp')}
+              <SiWhatsapp size={17} aria-hidden="true" /> {t('navWhatsApp')}
             </a>
           </nav>
           <div className="nav-actions">
@@ -375,7 +338,7 @@ function App() {
               <b>{selectedCount}</b>
             </button>
             <a className="nav-whatsapp" href={site.whatsappUrl} target="_blank" rel="noreferrer">
-              <MessageCircle size={16} aria-hidden="true" /> <span>{t('navWhatsApp')}</span>
+              <SiWhatsapp size={17} aria-hidden="true" /> <span>{t('navWhatsApp')}</span>
             </a>
             <button className="menu-toggle" type="button" aria-label={mobileMenuOpen ? t('menuClose') : t('menuOpen')} aria-expanded={mobileMenuOpen} onClick={() => setMobileMenuOpen((open) => !open)}>
               {mobileMenuOpen ? <X size={21} /> : <Menu size={21} />}
@@ -517,7 +480,7 @@ function App() {
               <div className="intro-side category-page-actions">
                 <p>{t('minimumOrderNotice')}</p>
                 <a className="category-whatsapp-link" href={categoryWhatsAppHref(currentCategory.id, activeSubcategory === 'all' ? undefined : activeSubcategory)} target="_blank" rel="noreferrer">
-                  <MessageCircle size={16} aria-hidden="true" />{t('categoryWhatsAppCta')}
+                  <SiWhatsapp size={17} aria-hidden="true" />{t('categoryWhatsAppCta')}
                 </a>
               </div>
             </div>
@@ -550,9 +513,9 @@ function App() {
                         {isAdded ? <span aria-hidden="true">✓</span> : <Plus size={17} aria-hidden="true" />}
                       </button>
                     </div>
-                    <button className="product-cta" type="button" onClick={() => shareProductInquiry(product, index)} disabled={sharingImages}>
-                      <span>{t('askModelWhatsApp')}</span><ArrowUpRight size={15} aria-hidden="true" />
-                    </button>
+                    <a className="product-cta" href={productWhatsAppHref(product, index)} target="_blank" rel="noreferrer">
+                      <SiWhatsapp size={17} aria-hidden="true" /><span>{t('askModelWhatsApp')}</span><ArrowUpRight size={15} aria-hidden="true" />
+                    </a>
                   </article>
                 )
               })}
@@ -645,11 +608,11 @@ function App() {
               </div>
             </motion.div>
             <motion.div className="contact-grid" {...revealProps}>
-              <a className="contact-card contact-card-primary" href={site.whatsappUrl} target="_blank" rel="noreferrer">
-                <span className="contact-icon"><MessageCircle size={20} aria-hidden="true" /></span><span className="contact-card-copy"><strong>{t('whatsappContact')}</strong><small>{site.whatsappDisplayNumber}</small></span><ArrowUpRight size={17} aria-hidden="true" />
+              <a className="contact-card contact-card-primary contact-card-whatsapp" href={site.whatsappUrl} target="_blank" rel="noreferrer">
+                <span className="contact-icon"><SiWhatsapp size={20} aria-hidden="true" /></span><span className="contact-card-copy"><strong>{t('whatsappContact')}</strong><small>{site.whatsappDisplayNumber}</small></span><ArrowUpRight size={17} aria-hidden="true" />
               </a>
-              <a className="contact-card" href={site.whatsappGroupUrl} target="_blank" rel="noreferrer">
-                <span className="contact-icon whatsapp-brand-icon"><SiWhatsapp size={20} aria-hidden="true" /></span><span className="contact-card-copy"><strong>{t('whatsappGroupContact')}</strong><small>{t('whatsappGroupDetail')}</small></span><ArrowUpRight size={17} aria-hidden="true" />
+              <a className="contact-card contact-card-whatsapp contact-card-whatsapp-group" href={site.whatsappGroupUrl} target="_blank" rel="noreferrer">
+                <span className="contact-icon"><SiWhatsapp size={20} aria-hidden="true" /></span><span className="contact-card-copy"><strong>{t('whatsappGroupContact')}</strong><small>{t('whatsappGroupDetail')}</small></span><ArrowUpRight size={17} aria-hidden="true" />
               </a>
               <a className="contact-card" href={site.facebookUrl} target="_blank" rel="noreferrer">
                 <span className="contact-icon facebook-brand-icon"><SiFacebook size={20} aria-hidden="true" /></span><span className="contact-card-copy"><strong>{t('facebookContact')}</strong><small>{t('facebookDetail')}</small></span><ArrowUpRight size={17} aria-hidden="true" />
@@ -668,7 +631,7 @@ function App() {
         {route.page === 'contact' && <section className="final-cta">
           <motion.div className="page-width final-cta-inner" {...revealProps}>
             <div><p className="eyebrow"><span className="eyebrow-mark" />{t('heroEyebrow')}</p><h2>{t('finalTitle')}</h2><p>{t('finalDescription')}</p></div>
-            <a className="button button-gold" href={site.whatsappUrl} target="_blank" rel="noreferrer">{t('finalButton')} <ArrowUpRight size={16} aria-hidden="true" /></a>
+            <a className="button button-whatsapp" href={site.whatsappUrl} target="_blank" rel="noreferrer"><SiWhatsapp size={19} aria-hidden="true" />{t('finalButton')} <ArrowUpRight size={16} aria-hidden="true" /></a>
           </motion.div>
         </section>}
 
@@ -689,7 +652,7 @@ function App() {
             <p>{t('footerAddress')}</p>
           </div>
           <div className="footer-column"><h3>{t('footerNavigate')}</h3>{navLinks.map((link) => <a href={link.href} key={link.href}>{link.label}</a>)}</div>
-          <div className="footer-column"><h3>{t('footerContact')}</h3><a href={site.whatsappUrl} target="_blank" rel="noreferrer">{t('whatsappContact')}</a><a href={site.whatsappGroupUrl} target="_blank" rel="noreferrer">{t('whatsappGroupContact')}</a><a href={site.facebookUrl} target="_blank" rel="noreferrer">{t('facebookContact')}</a><a href={site.telegramUrl} target="_blank" rel="noreferrer">{t('telegramContact')}</a><a href={site.googleMapsUrl} target="_blank" rel="noreferrer">{t('mapsButton')}</a></div>
+          <div className="footer-column"><h3>{t('footerContact')}</h3><a className="footer-whatsapp-link" href={site.whatsappUrl} target="_blank" rel="noreferrer"><SiWhatsapp size={15} aria-hidden="true" />{t('whatsappContact')}</a><a className="footer-whatsapp-link" href={site.whatsappGroupUrl} target="_blank" rel="noreferrer"><SiWhatsapp size={15} aria-hidden="true" />{t('whatsappGroupContact')}</a><a href={site.facebookUrl} target="_blank" rel="noreferrer">{t('facebookContact')}</a><a href={site.telegramUrl} target="_blank" rel="noreferrer">{t('telegramContact')}</a><a href={site.googleMapsUrl} target="_blank" rel="noreferrer">{t('mapsButton')}</a></div>
         </motion.div>
         <div className="page-width footer-bottom"><span>© {currentYear} {site.brandName}. {t('copyright')}</span><span>{t('footerLocation')}</span></div>
       </footer>
@@ -720,7 +683,7 @@ function App() {
             {totalUnits < 12 && <p className="drawer-minimum-hint" role="status">{t('minimumOrderHint')}</p>}
             <button className="clear-button" type="button" onClick={() => setInquiry({})} disabled={!selectedCount}>{t('clearInquiry')}</button>
           </>}
-          <div className="drawer-footer"><button className="button button-gold drawer-send" type="button" onClick={shareCartInquiry} disabled={sharingImages || (selectedCount > 0 && totalUnits < 12)}><MessageCircle size={18} aria-hidden="true" />{selectedCount ? t('sendInquiry') : t('generalInquiry')}</button></div>
+          <div className="drawer-footer"><button className="button button-whatsapp drawer-send" type="button" onClick={shareCartInquiry} disabled={selectedCount > 0 && totalUnits < 12}><SiWhatsapp size={19} aria-hidden="true" />{selectedCount ? t('sendInquiry') : t('generalInquiry')}</button></div>
         </aside>
       </div>}
     </div>

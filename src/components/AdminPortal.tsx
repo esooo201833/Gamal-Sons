@@ -826,36 +826,48 @@ export default function AdminPortal({ siteContent, onSaved }: Props) {
                       <section className="admin-category-manager" aria-label="إدارة الفئات والأقسام">
                         <h3>الفئات والأقسام الحالية</h3>
                         {draft.categories.map((category) => (
-                          <article className="admin-category-card" key={category.id}>
-                            <div className="admin-category-heading">
-                              <div className="admin-localized-fields">
-                                {(['ar', 'en', 'fr'] as const).map((locale) => (
-                                  <label key={locale}>{`اسم الفئة · ${languageNames[locale]}`}<input value={category.label[locale]} onChange={(event) => updateCategoryLabel(category.id, locale, event.target.value)} /></label>
-                                ))}
-                              </div>
-                              <button className="admin-delete-product" type="button" onClick={() => removeCategory(category.id)} aria-label={`حذف الفئة ${category.label.ar}`}><Trash2 size={16} /></button>
-                            </div>
-                            <div className="admin-subcategory-list">
-                              {category.subcategories.map((subcategory) => (
-                                <div className="admin-subcategory-row" key={subcategory.id}>
-                                  <div className="admin-localized-fields">
-                                    {(['ar', 'en', 'fr'] as const).map((locale) => (
-                                      <label key={locale}>{`اسم القسم · ${languageNames[locale]}`}<input value={subcategory.label[locale]} onChange={(event) => updateSubcategoryLabel(category.id, subcategory.id, locale, event.target.value)} /></label>
-                                    ))}
-                                  </div>
-                                  <button className="admin-delete-product" type="button" onClick={() => removeSubcategory(category.id, subcategory.id)} aria-label={`حذف القسم ${subcategory.label.ar}`}><Trash2 size={16} /></button>
+                          <details className="admin-category-card" key={category.id}>
+                            <summary className="admin-category-summary">
+                              <span className="admin-category-summary-copy">
+                                <strong>{category.label.ar || 'فئة بدون اسم'}</strong>
+                                <code>{category.id}</code>
+                              </span>
+                              <span className="admin-category-summary-meta">
+                                {category.subcategories.length} قسم
+                                <ChevronDown size={16} aria-hidden="true" />
+                              </span>
+                            </summary>
+                            <div className="admin-category-body">
+                              <div className="admin-category-heading">
+                                <div className="admin-localized-fields">
+                                  {(['ar', 'en', 'fr'] as const).map((locale) => (
+                                    <label key={locale}>{`اسم الفئة · ${languageNames[locale]}`}<input value={category.label[locale]} onChange={(event) => updateCategoryLabel(category.id, locale, event.target.value)} /></label>
+                                  ))}
                                 </div>
-                              ))}
-                            </div>
-                            <div className="admin-add-subcategory">
-                              <div className="admin-localized-fields">
-                                {(['ar', 'en', 'fr'] as const).map((locale) => (
-                                  <label key={locale}>{`قسم جديد · ${languageNames[locale]}`}<input value={newSubcategoryLabels[category.id]?.[locale] ?? ''} onChange={(event) => setNewSubcategoryLabels((current) => ({ ...current, [category.id]: { ...(current[category.id] ?? emptyLocalizedLabel()), [locale]: event.target.value } }))} /></label>
+                                <button className="admin-delete-product" type="button" onClick={() => removeCategory(category.id)} aria-label={`حذف الفئة ${category.label.ar}`}><Trash2 size={16} /></button>
+                              </div>
+                              <div className="admin-subcategory-list">
+                                {category.subcategories.map((subcategory) => (
+                                  <div className="admin-subcategory-row" key={subcategory.id}>
+                                    <div className="admin-localized-fields">
+                                      {(['ar', 'en', 'fr'] as const).map((locale) => (
+                                        <label key={locale}>{`اسم القسم · ${languageNames[locale]}`}<input value={subcategory.label[locale]} onChange={(event) => updateSubcategoryLabel(category.id, subcategory.id, locale, event.target.value)} /></label>
+                                      ))}
+                                    </div>
+                                    <button className="admin-delete-product" type="button" onClick={() => removeSubcategory(category.id, subcategory.id)} aria-label={`حذف القسم ${subcategory.label.ar}`}><Trash2 size={16} /></button>
+                                  </div>
                                 ))}
                               </div>
-                              <button className="admin-add-product" type="button" onClick={() => addSubcategory(category.id)}><Plus size={15} /> إضافة قسم</button>
+                              <div className="admin-add-subcategory">
+                                <div className="admin-localized-fields">
+                                  {(['ar', 'en', 'fr'] as const).map((locale) => (
+                                    <label key={locale}>{`قسم جديد · ${languageNames[locale]}`}<input value={newSubcategoryLabels[category.id]?.[locale] ?? ''} onChange={(event) => setNewSubcategoryLabels((current) => ({ ...current, [category.id]: { ...(current[category.id] ?? emptyLocalizedLabel()), [locale]: event.target.value } }))} /></label>
+                                  ))}
+                                </div>
+                                <button className="admin-add-product" type="button" onClick={() => addSubcategory(category.id)}><Plus size={15} /> إضافة قسم</button>
+                              </div>
                             </div>
-                          </article>
+                          </details>
                         ))}
                         <form className="admin-new-category" onSubmit={addCategory}>
                           <h4>إضافة فئة جديدة</h4>
