@@ -3,6 +3,7 @@ import {
   ArrowUpRight,
   Check,
   ChevronDown,
+  Download,
   ImagePlus,
   LogOut,
   Play,
@@ -10,6 +11,7 @@ import {
   Save,
   ShieldCheck,
   Trash2,
+  Upload,
   X,
 } from 'lucide-react'
 import type { Language } from '../i18n/translations'
@@ -101,6 +103,21 @@ async function getImageDimensions(file: File): Promise<{ width: number; height: 
   }
 }
 
+async function getRemoteImageDimensions(imageUrl: string): Promise<{ width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    const image = new Image()
+    image.onload = () => {
+      if (image.naturalWidth > 0 && image.naturalHeight > 0) {
+        resolve({ width: image.naturalWidth, height: image.naturalHeight })
+      } else {
+        reject(new Error('أبعاد الصورة غير صالحة.'))
+      }
+    }
+    image.onerror = () => reject(new Error('تعذر تحميل الصورة من الرابط.'))
+    image.src = imageUrl
+  })
+}
+
 function translationLabel(key: TranslationKey): string {
   return key.replace(/[A-Z]/g, (letter) => ` ${letter.toLowerCase()}`)
 }
@@ -122,6 +139,8 @@ export default function AdminPortal({ siteContent, onSaved }: Props) {
   const [confirmNewPassword, setConfirmNewPassword] = useState('')
   const [accountNotice, setAccountNotice] = useState('')
   const [uploadingProduct, setUploadingProduct] = useState<string | null>(null)
+  const [importingProducts, setImportingProducts] = useState(false)
+  const [productImportNotice, setProductImportNotice] = useState('')
   const [newModelCode, setNewModelCode] = useState('')
   const [newModelCategory, setNewModelCategory] = useState<Product['category']>('abaya')
   const [newModelSubcategory, setNewModelSubcategory] = useState<ProductSubcategory | ''>('')
@@ -381,6 +400,137 @@ export default function AdminPortal({ siteContent, onSaved }: Props) {
     }
   }
 
+  const downloadProductTemplate = async () => {
+    setError('')
+    const exampleCategory = draft.categories[0]
+    const exampleSubcategory = exampleCategory?.subcategories[0]
+    try {
+      const { default: writeXlsxFile } = await import('write-excel-file/browser')
+      const workbook = await writeXlsxFile([
+        [
+          { value: 'كود الموديل', fontWeight: 'bold' },
+          { value: 'الفئة (id)', fontWeight: 'bold' },
+          { value: 'القسم (id)', fontWeight: 'bold' },
+          { value: 'رابط الصورة', fontWeight: 'bold' },
+        ],
+        [
+          'مثال-248',
+          exampleCategory?.id ?? '',
+          exampleSubcategory?.id ?? '',
+          'https://example.com/product-248.jpg',
+        ],
+      ], {
+        sheet: 'المنتجات',
+        rightToLeft: true,
+        columns: [{ width: 22 }, { width: 22 }, { width: 22 }, { width: 48 }],
+      })
+      await workbook.toFile('نموذج-استيراد-المنتجات.xlsx')
+    } catch (downloadError) {
+      setError(downloadError instanceof Error ? downloadError.message : 'تعذر تنزيل نموذج Excel.')
+    }
+  }
+
+  const importProductsFromSheet = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.currentTarget.files?.[0]
+    event.currentTarget.value = ''
+    if (!file) return
+
+    setError('')
+    setProductImportNotice('')
+    if (!file.name.toLocaleLowerCase().endsWith('.xlsx')) {
+      setError('اختر ملف Excel بصيغة xlsx.')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError('يجب ألا يتجاوز حجم ملف Excel خمسة ميجابايت.')
+      return
+    }
+
+    setImportingProducts(true)
+    try {
+      const { readSheet } = await import('read-excel-file/browser')
+      const rows = await readSheet(file)
+      if (rows.length < 2) throw new Error('الملف لا يحتوي على صفوف منتجات.')
+
+      const headers = rows[0].map((cell) =>
+        typeof cell === 'string' ? cell.trim().toLocaleLowerCase() : '',
+      )
+      const columnIndex = (names: string[]) => headers.findIndex((header) => names.includes(header))
+      const modelCodeColumn = columnIndex(['كود الموديل', 'modelcode', 'model code'])
+      const categoryColumn = columnIndex(['الفئة (id)', 'الفئة', 'category'])
+      const subcategoryColumn = columnIndex(['القسم (id)', 'القسم', 'subcategory'])
+      const imageColumn = columnIndex(['رابط الصورة', 'imageurl', 'image url'])
+
+      if (modelCodeColumn < 0 || categoryColumn < 0 || imageColumn < 0) {
+        throw new Error('تأكد من وجود أعمدة «كود الموديل» و«الفئة (id)» و«رابط الصورة» في الصف الأول.')
+      }
+
+      const productRows = rows.slice(1).flatMap((row, index) => {
+        const values = row.map((cell) => String(cell ?? '').trim())
+        if (values.every((value) => !value)) return []
+
+        const rowNumber = index + 2
+        const modelCode = values[modelCodeColumn] || null
+        const category = values[categoryColumn]
+        const subcategory = subcategoryColumn < 0 ? '' : values[subcategoryColumn]
+        const rawImageUrl = values[imageColumn]
+        if (!category || !isProductCategory(category, draft.categories)) {
+          throw new Error(`الفئة غير صحيحة في الصف ${rowNumber}. استخدم معرّف فئة موجودًا.`)
+        }
+        if (subcategory && !isProductSubcategory(category, subcategory, draft.categories)) {
+          throw new Error(`القسم غير صحيح في الصف ${rowNumber} أو لا يتبع الفئة المحددة.`)
+        }
+        let imageUrl: URL
+        try {
+          imageUrl = new URL(rawImageUrl)
+        } catch {
+          throw new Error(`رابط الصورة غير صالح في الصف ${rowNumber}.`)
+        }
+        if (imageUrl.protocol !== 'https:' || imageUrl.username || imageUrl.password) {
+          throw new Error(`يجب أن يكون رابط الصورة آمنًا ويبدأ بـ https:// في الصف ${rowNumber}.`)
+        }
+        return [{
+          rowNumber,
+          modelCode,
+          category,
+          subcategory: subcategory || null,
+          imageUrl: imageUrl.toString(),
+        }]
+      })
+
+      if (productRows.length === 0) throw new Error('لم يتم العثور على منتجات لاستيرادها.')
+      if (productRows.length > 500) throw new Error('يمكن استيراد 500 موديل كحد أقصى في المرة الواحدة.')
+
+      const importedProducts: Product[] = []
+      for (let offset = 0; offset < productRows.length; offset += 8) {
+        const batch = await Promise.all(productRows.slice(offset, offset + 8).map(async (row) => {
+          try {
+            const dimensions = await getRemoteImageDimensions(row.imageUrl)
+            return {
+              id: `model-${crypto.randomUUID()}`,
+              image: row.imageUrl,
+              ...dimensions,
+              modelCode: row.modelCode,
+              modelCodeStatus: row.modelCode ? 'verified' as const : 'needs-review' as const,
+              category: row.category,
+              subcategory: row.subcategory,
+            }
+          } catch {
+            throw new Error(`تعذر تحميل صورة الصف ${row.rowNumber}. تأكد أن الرابط مباشر ومتاح للعامة.`)
+          }
+        }))
+        importedProducts.push(...batch)
+      }
+
+      setDraft((current) => ({ ...current, products: [...importedProducts, ...current.products] }))
+      setProductImportNotice(`تم تجهيز ${importedProducts.length} موديل. اضغط «حفظ التعديلات» لنشرها.`)
+    } catch (importError) {
+      setError(importError instanceof Error ? importError.message : 'تعذر استيراد ملف Excel.')
+    } finally {
+      setImportingProducts(false)
+    }
+  }
+
   const removeProduct = (id: string) => {
     setDraft((current) => ({
       ...current,
@@ -614,7 +764,7 @@ export default function AdminPortal({ siteContent, onSaved }: Props) {
                       </h1>
                     </div>
                     {tab !== 'account' && (
-                      <button className="admin-save" type="button" onClick={saveChanges} disabled={saving}>
+                      <button className="admin-save" type="button" onClick={saveChanges} disabled={saving || importingProducts}>
                         {saving ? <span className="admin-spinner" /> : <Save size={16} aria-hidden="true" />}
                         {saving ? 'جارٍ الحفظ…' : 'حفظ التعديلات'}
                       </button>
@@ -716,6 +866,40 @@ export default function AdminPortal({ siteContent, onSaved }: Props) {
                           </div>
                           <button className="admin-add-product" type="submit"><Plus size={15} /> إضافة فئة</button>
                         </form>
+                      </section>
+
+                      <section className="admin-bulk-products">
+                        <div>
+                          <h3>إضافة موديلات من ملف Excel</h3>
+                          <p>ارفع ملف Excel بصيغة xlsx يحتوي على بيانات الموديلات وروابط صور مباشرة وآمنة.</p>
+                        </div>
+                        <div className="admin-bulk-product-actions">
+                          <label className={`admin-file-input${importingProducts || saving ? ' is-disabled' : ''}`}>
+                            <Upload size={15} />
+                            {importingProducts ? 'جارٍ استيراد الموديلات…' : 'اختيار ملف Excel'}
+                            <input type="file" accept=".xlsx" disabled={importingProducts || saving} onChange={(event) => void importProductsFromSheet(event)} />
+                          </label>
+                          <button className="admin-add-product admin-template-button" type="button" onClick={() => void downloadProductTemplate()}>
+                            <Download size={15} /> تنزيل نموذج Excel
+                          </button>
+                        </div>
+                        <p className="admin-bulk-product-help">الأعمدة المطلوبة: كود الموديل، الفئة (id)، رابط الصورة. القسم (id) اختياري. استبدل رابط الصورة التجريبي برابط صورة مباشر، ثم احفظ التعديلات.</p>
+                        <details className="admin-bulk-product-categories">
+                          <summary>عرض معرّفات الفئات والأقسام</summary>
+                          <ul>
+                            {draft.categories.map((category) => (
+                              <li key={category.id}>
+                                <code>{category.id}</code> — {category.label.ar}
+                                {category.subcategories.length > 0 && (
+                                  <ul>{category.subcategories.map((subcategory) => (
+                                    <li key={subcategory.id}><code>{subcategory.id}</code> — {subcategory.label.ar}</li>
+                                  ))}</ul>
+                                )}
+                              </li>
+                            ))}
+                          </ul>
+                        </details>
+                        {productImportNotice && <p className="admin-import-notice" role="status">{productImportNotice}</p>}
                       </section>
 
                       <form className="admin-new-product" onSubmit={addProduct}>

@@ -276,19 +276,7 @@ function App() {
 
   const shareCartInquiry = () => {
     if (selectedCount > 0 && totalUnits < 12) return
-    if (selectedModels.length === 0) {
-      window.location.assign(whatsappHref())
-      return
-    }
-    const message = selectedModels.map((product) => {
-      const index = products.findIndex((item) => item.id === product.id)
-      return `- ${productInquiryLabel(product, index)} × ${inquiry[product.id]}\n  ${absoluteProductImageUrl(product)}`
-    })
-    void shareProductImages(
-      selectedModels,
-      message.length ? `${t('whatsappMessage')}\n\n${message.join('\n')}` : t('generalWhatsAppMessage'),
-      whatsappHref(),
-    )
+    window.location.assign(whatsappHref())
   }
 
   const productWhatsAppHref = (product: (typeof products)[number], index: number) => {
