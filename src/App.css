@@ -40,8 +40,9 @@
 .hero-inner { position: relative; z-index: 1; min-height: 620px; padding-block: 66px 70px; display: grid; grid-template-columns: 1.04fr .96fr; align-items: center; gap: 56px; }
 .home-brand-inner { min-height: 570px; }
 .home-brand-mark { width: min(100%, 390px); aspect-ratio: 1; justify-self: center; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 1px solid rgb(201 163 95 / 42%); border-radius: 50%; background: radial-gradient(circle, rgb(255 255 255 / 84%), rgb(239 231 216 / 45%) 67%, transparent 68%); box-shadow: 0 0 0 12px rgb(201 163 95 / 5%), 0 20px 55px rgb(40 31 16 / 9%); }
-.home-brand-mark img { width: 58%; height: 58%; object-fit: contain; filter: drop-shadow(0 5px 7px rgb(24 19 13 / 58%)); }
+.home-brand-mark img { width: 70%; height: 70%; object-fit: contain; filter: drop-shadow(0 5px 7px rgb(24 19 13 / 58%)); }
 .home-brand-mark > span { margin-block-start: -8px; color: #211b14; font-family: var(--arabic-font); font-size: 24px; font-weight: 800; text-shadow: 0 2px 3px rgb(24 19 13 / 58%), 0 0 12px rgb(201 163 95 / 44%); }
+.home-brand-category { color: #77551e; font-family: var(--arabic-font); font-size: 24px; font-weight: 700; line-height: 1.4; }
 .home-brand-mark small { margin-block-start: 7px; color: #766b58; font-size: 10px; }
 .hero-copy { max-width: 610px; padding-block: 22px; }
 .hero-copy .eyebrow { color: #76684f; }
