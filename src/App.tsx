@@ -3,6 +3,7 @@ import {
   ArrowUpRight,
   Clock3,
   ClipboardList,
+  Crown,
   Globe2,
   MapPin,
   Menu,
@@ -362,8 +363,11 @@ function App() {
               </div>
               <p className="hero-note"><span />{t('heroNote')}</p>
             </div>
-            <div className="home-brand-mark">
-              <img src={site.brandLogoUrl} alt={t('logoAlt')} />
+            <div className="home-brand-mark" role="img" aria-label={t('logoAlt')}>
+              <span className="home-brand-kicker"><Crown size={30} strokeWidth={1.4} aria-hidden="true" />مكتب</span>
+              <strong>{site.brandNameArabic}</strong>
+              <span className="home-brand-rule" />
+              <small>للعبايات</small>
             </div>
           </div>
           <div className="hero-bottom page-width"><span>{t('heroNote')}</span><span>{t('heroFounded')}</span><span>{t('heroLocation')}</span></div>
