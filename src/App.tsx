@@ -364,6 +364,7 @@ function App() {
             </div>
             <div className="home-brand-mark">
               <img src={site.brandLogoUrl} alt={t('logoAlt')} />
+              <span>{site.brandNameArabic}</span>
               <strong className="home-brand-category">للعبايات</strong>
               <small>{t('heroFounded')} · {t('heroLocation')}</small>
             </div>
