@@ -39,8 +39,9 @@
 .hero-section::after { position: absolute; inset-inline: 0; inset-block-start: 0; height: 2px; background: linear-gradient(90deg, transparent, var(--gold), transparent); content: ''; }
 .hero-inner { position: relative; z-index: 1; min-height: 620px; padding-block: 66px 70px; display: grid; grid-template-columns: 1.04fr .96fr; align-items: center; gap: 56px; }
 .home-brand-inner { min-height: 570px; }
-.home-brand-mark { width: min(100%, 460px); justify-self: center; }
-.home-brand-mark img { width: 100%; height: auto; object-fit: contain; filter: drop-shadow(0 0 1px rgb(77 56 27 / 85%)); }
+.home-brand-mark { position: relative; width: min(100%, 460px); aspect-ratio: 1; justify-self: center; display: grid; place-items: center; border: 1px solid rgb(177 135 65 / 48%); border-radius: 50%; background: radial-gradient(circle at 50% 42%, rgb(255 255 255 / 62%), rgb(239 231 216 / 34%) 70%, rgb(201 163 95 / 10%)); box-shadow: 0 0 0 8px rgb(201 163 95 / 7%), 0 18px 48px rgb(40 31 16 / 14%), inset 0 1px 14px rgb(255 255 255 / 52%); }
+.home-brand-mark::after { position: absolute; inset: 9px; border: 1px solid rgb(177 135 65 / 22%); border-radius: 50%; content: ''; pointer-events: none; }
+.home-brand-mark img { width: 88%; height: auto; object-fit: contain; filter: drop-shadow(0 3px 4px rgb(63 45 21 / 24%)); }
 .hero-copy { max-width: 610px; padding-block: 22px; }
 .hero-copy .eyebrow { color: #76684f; }
 .eyebrow { margin: 0 0 22px; display: flex; align-items: center; gap: 10px; color: #e3d6c0; font-size: 11px; font-weight: 500; letter-spacing: .08em; }
